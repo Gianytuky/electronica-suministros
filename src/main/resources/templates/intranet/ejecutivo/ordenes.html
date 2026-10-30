@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+
+<head th:replace="~{fragments/header :: head('Órdenes de trabajo')}"></head>
+
+<body class="bg-light">
+    <div class="d-flex">
+        <th:block th:replace="~{fragments/sidebar :: sidebar('ordenes')}"></th:block>
+
+        <main class="flex-grow-1 p-4 overflow-auto" style="height: 100vh;">
+
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+                <div>
+                    <h2 class="fw-bold mb-0"><i class="bi bi-clipboard-check text-warning me-2"></i>Órdenes de trabajo</h2>
+                    <small class="text-muted">
+                        Flujo: <span class="badge bg-warning text-dark">En Recepción</span> &rarr;
+                        <span class="badge bg-info text-dark">Por Notificar</span> &rarr;
+                        <span class="badge bg-success">Finalizado</span>.
+                        La edición comercial solo es posible en <strong>En Recepción</strong>.
+                    </small>
+                </div>
+                <a th:href="@{/ejecutivo/ordenes/nueva}" class="btn btn-warning fw-bold">
+                    <i class="bi bi-plus-circle me-1"></i>Nueva OT
+                </a>
+            </div>
+
+            <div th:replace="~{fragments/header :: alertas}"></div>
+
+            <!-- FILTROS -->
+            <form th:action="@{/ejecutivo/ordenes}" method="get" class="card shadow-sm border-0 rounded-4 mb-4">
+                <div class="card-body">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-5">
+                            <label class="form-label small fw-semibold">Buscar</label>
+                            <input type="text" name="texto" class="form-control" th:value="${texto}"
+                                placeholder="Código de OT, cliente o documento">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">Estado</label>
+                            <select name="estado" class="form-select">
+                                <option value="">Todos</option>
+                                <option th:each="e : ${estados}" th:value="${e}" th:text="${e}"
+                                    th:selected="${e == estado}">En Recepción</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex gap-2">
+                            <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-search me-1"></i>Filtrar</button>
+                            <a th:href="@{/ejecutivo/ordenes}" class="btn btn-outline-secondary flex-fill">Limpiar</a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-header bg-white fw-semibold d-flex justify-content-between">
+                    <span><i class="bi bi-list-ul me-2 text-primary"></i>Listado de OTs</span>
+                    <span class="text-muted small" th:text="${#lists.size(ordenes)} + ' resultado(s)'">0 resultado(s)</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle mb-0">
+                        <thead class="table-dark small">
+                            <tr>
+                                <th>OT</th>
+                                <th>Recepción</th>
+                                <th>Cliente</th>
+                                <th>Formatos</th>
+                                <th class="text-center">Captura</th>
+                                <th class="text-center">Estado</th>
+                                <th class="text-end">Monto</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="o : ${ordenes}">
+                                <td class="fw-bold text-nowrap" th:text="${o.codigoOt}">OT-1001</td>
+                                <td class="text-nowrap small" th:text="${o.fechaRecepcion}">01/10/2026 10:00</td>
+                                <td>
+                                    <div class="fw-semibold" th:text="${o.cliente}">Cliente</div>
+                                    <small class="text-muted" th:text="${o.dniCliente}">70000001</small>
+                                </td>
+                                <td style="max-width: 220px;">
+                                    <span class="d-inline-block text-truncate small" style="max-width: 210px;"
+                                        th:text="${o.formatos}" th:title="${o.formatos}">VHS</span>
+                                </td>
+                                <td class="text-center small">
+                                    <span th:text="${o.capturadas} + ' / ' + ${o.lineas}">0 / 1</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge"
+                                        th:classappend="${o.estado == 'En Recepción'} ? 'bg-warning text-dark' : (${o.estado == 'Por Notificar'} ? 'bg-info text-dark' : (${o.estado == 'Finalizado'} ? 'bg-success' : 'bg-danger'))"
+                                        th:text="${o.estado}">En Recepción</span>
+                                </td>
+                                <td class="text-end fw-semibold text-nowrap"
+                                    th:text="'S/ ' + ${#numbers.formatDecimal(o.montoEstimado, 1, 'COMMA', 2, 'POINT')}">S/ 0.00</td>
+                                <td class="text-center text-nowrap">
+                                    <a th:href="@{/ejecutivo/ordenes/{id}(id=${o.idOt})}"
+                                        class="btn btn-sm btn-outline-secondary" title="Ver detalle">
+                                        <i class="bi bi-eye"></i></a>
+
+                                    <!-- RF-05 / RF-06: editar solo En Recepción y sin captura; si no, el botón queda bloqueado -->
+                                    <a th:if="${o.estado == 'En Recepción' and o.capturadas == 0}"
+                                        th:href="@{/ejecutivo/ordenes/{id}/editar(id=${o.idOt})}"
+                                        class="btn btn-sm btn-outline-primary" title="Editar OT">
+                                        <i class="bi bi-pencil-square"></i></a>
+                                    <button th:unless="${o.estado == 'En Recepción' and o.capturadas == 0}" type="button"
+                                        class="btn btn-sm btn-outline-secondary" disabled
+                                        title="Edición bloqueada: la OT ya no está En Recepción o tiene captura técnica">
+                                        <i class="bi bi-lock-fill"></i></button>
+
+                                    <form th:if="${o.estado == 'Por Notificar'}"
+                                        th:action="@{/ejecutivo/ordenes/{id}/liquidar(id=${o.idOt})}" method="post"
+                                        class="d-inline"
+                                        onsubmit="return confirm('¿Cobrar y entregar esta OT? Se emitirá la boleta y la OT quedará Finalizada.');">
+                                        <button type="submit" class="btn btn-sm btn-success" title="Cobrar y entregar">
+                                            <i class="bi bi-cash-coin"></i></button>
+                                    </form>
+
+                                    <a th:if="${o.estado == 'Finalizado'}"
+                                        th:href="@{/ejecutivo/ordenes/{id}/comprobante(id=${o.idOt})}" target="_blank"
+                                        class="btn btn-sm btn-outline-danger" th:title="'Boleta ' + ${o.numeroComprobante}">
+                                        <i class="bi bi-file-earmark-pdf"></i></a>
+
+                                    <form th:if="${o.estado == 'En Recepción' or o.estado == 'Por Notificar'}"
+                                        th:action="@{/ejecutivo/ordenes/{id}/cancelar(id=${o.idOt})}" method="post"
+                                        class="d-inline"
+                                        onsubmit="return confirm('¿Cancelar esta orden de trabajo?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Cancelar OT">
+                                            <i class="bi bi-x-circle"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(ordenes)}">
+                                <td colspan="8" class="text-center text-muted py-4">No se encontraron órdenes de trabajo.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <th:block th:replace="~{fragments/footer :: scripts}"></th:block>
+</body>
+
+</html>

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+
+<head th:replace="~{fragments/header :: head('Dashboard gerencial')}"></head>
+
+<body class="bg-light">
+    <div class="d-flex">
+        <th:block th:replace="~{fragments/sidebar :: sidebar('dashboard')}"></th:block>
+
+        <main class="flex-grow-1 p-4 overflow-auto" style="height: 100vh;">
+
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+                <div>
+                    <h2 class="fw-bold mb-0"><i class="bi bi-speedometer2 text-danger me-2"></i>Dashboard gerencial</h2>
+                    <small class="text-muted">
+                        Indicadores del negocio. Los ingresos por mes del año <strong th:text="${anio}">2026</strong> los calcula el
+                        procedimiento almacenado <code>SP_Reporte_Ventas</code>.
+                    </small>
+                </div>
+                <a th:href="@{/admin/reportes}" class="btn btn-outline-primary fw-semibold">
+                    <i class="bi bi-bar-chart-line me-1"></i>Ver reportes detallados
+                </a>
+            </div>
+
+            <!-- ===== KPIs ===== -->
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-xl-2">
+                    <div class="card border-0 rounded-3 bg-primary shadow-sm p-3 h-100 text-white">
+                        <span class="small text-uppercase fw-semibold opacity-75">Ingresos cobrados</span>
+                        <span class="fs-4 fw-bold lh-1" th:text="'S/ ' + ${#numbers.formatDecimal(kpi.ingresos, 1, 'COMMA', 2, 'POINT')}">S/ 0.00</span>
+                    </div>
+                </div>
+                <div class="col-6 col-xl-2">
+                    <div class="card border-0 rounded-3 bg-warning shadow-sm p-3 h-100 text-dark">
+                        <span class="small text-uppercase fw-semibold opacity-75">Por cobrar</span>
+                        <span class="fs-4 fw-bold lh-1" th:text="'S/ ' + ${#numbers.formatDecimal(kpi.porCobrar, 1, 'COMMA', 2, 'POINT')}">S/ 0.00</span>
+                    </div>
+                </div>
+                <div class="col-6 col-xl-2">
+                    <a th:href="@{/ejecutivo/ordenes}" class="text-decoration-none">
+                        <div class="card border-0 rounded-3 bg-success shadow-sm p-3 h-100 text-white">
+                            <span class="small text-uppercase fw-semibold opacity-75">Órdenes de trabajo</span>
+                            <span class="fs-4 fw-bold lh-1" th:text="${kpi.totalOrdenes}">0</span>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-6 col-xl-2">
+                    <div class="card border-0 rounded-3 bg-info shadow-sm p-3 h-100 text-dark">
+                        <span class="small text-uppercase fw-semibold opacity-75">Horas capturadas</span>
+                        <span class="fs-4 fw-bold lh-1" th:text="${kpi.horas} + ' h'">0 h</span>
+                    </div>
+                </div>
+                <div class="col-6 col-xl-2">
+                    <div class="card border-0 rounded-3 bg-secondary shadow-sm p-3 h-100 text-white">
+                        <span class="small text-uppercase fw-semibold opacity-75">Datos generados</span>
+                        <span class="fs-4 fw-bold lh-1" th:text="${kpi.gb} + ' GB'">0 GB</span>
+                    </div>
+                </div>
+                <div class="col-6 col-xl-2">
+                    <a th:href="@{/ejecutivo/mensajes}" class="text-decoration-none">
+                        <div class="card border-0 rounded-3 bg-danger shadow-sm p-3 h-100 text-white">
+                            <span class="small text-uppercase fw-semibold opacity-75">Consultas nuevas</span>
+                            <span class="fs-4 fw-bold lh-1" th:text="${kpi.mensajesNuevos}">0</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- ===== GRÁFICOS ===== -->
+            <div class="row g-4 mb-4">
+                <div class="col-lg-7">
+                    <div class="card shadow-sm border-0 rounded-4 h-100">
+                        <div class="card-header bg-dark text-white fw-bold">
+                            <i class="bi bi-bar-chart-fill text-warning me-2"></i>Ingresos por mes (S/)
+                            <span class="float-end small fw-normal">Total del año: <strong id="totalAnio">S/ 0.00</strong></span>
+                        </div>
+                        <div class="card-body"><div style="position: relative; height: 300px;"><canvas id="graficoMeses"></canvas></div></div>
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <div class="card shadow-sm border-0 rounded-4 h-100">
+                        <div class="card-header bg-dark text-white fw-bold">
+                            <i class="bi bi-pie-chart-fill text-info me-2"></i>OTs por estado
+                        </div>
+                        <div class="card-body"><div style="position: relative; height: 300px;"><canvas id="graficoEstados"></canvas></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-5">
+                    <div class="card shadow-sm border-0 rounded-4 h-100">
+                        <div class="card-header bg-dark text-white fw-bold">
+                            <i class="bi bi-collection-play text-success me-2"></i>Servicios pedidos por categoría
+                        </div>
+                        <div class="card-body"><div style="position: relative; height: 280px;"><canvas id="graficoCategorias"></canvas></div></div>
+                    </div>
+                </div>
+                <div class="col-lg-7">
+                    <div class="card shadow-sm border-0 rounded-4 h-100">
+                        <div class="card-header bg-dark text-white fw-bold">
+                            <i class="bi bi-clock-history text-warning me-2"></i>Últimas órdenes de trabajo
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover table-sm align-middle mb-0">
+                                <thead class="table-dark small">
+                                    <tr><th>OT</th><th>Cliente</th><th class="text-center">Estado</th><th class="text-end">Monto</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="o : ${recientes}">
+                                        <td class="fw-semibold">
+                                            <a th:href="@{/ejecutivo/ordenes/{id}(id=${o.idOt})}" class="text-decoration-none" th:text="${o.codigoOt}">OT-1001</a>
+                                        </td>
+                                        <td th:text="${o.cliente}">Cliente</td>
+                                        <td class="text-center">
+                                            <span class="badge"
+                                                th:classappend="${o.estado == 'En Recepción'} ? 'bg-warning text-dark' : (${o.estado == 'Por Notificar'} ? 'bg-info text-dark' : (${o.estado == 'Finalizado'} ? 'bg-success' : 'bg-danger'))"
+                                                th:text="${o.estado}">Estado</span>
+                                        </td>
+                                        <td class="text-end" th:text="'S/ ' + ${#numbers.formatDecimal(o.montoEstimado, 1, 'COMMA', 2, 'POINT')}">S/ 0.00</td>
+                                    </tr>
+                                    <tr th:if="${#lists.isEmpty(recientes)}">
+                                        <td colspan="4" class="text-center text-muted py-3">Aún no hay órdenes de trabajo.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <th:block th:replace="~{fragments/footer :: scripts}"></th:block>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const ANIO = /*[[${anio}]]*/ 2026;
+        /*]]>*/
+
+        const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        const PALETA = ['#0d6efd', '#ffc107', '#198754', '#dc3545', '#0dcaf0', '#6f42c1'];
+        const COLOR_ESTADO = { 'En Recepción': '#ffc107', 'Por Notificar': '#0dcaf0', 'Finalizado': '#198754', 'Cancelado': '#dc3545' };
+        const soles = (v) => 'S/ ' + Number(v).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        async function pedir(url) {
+            const r = await fetch(url);
+            const tipo = r.headers.get('content-type') || '';
+            if (!r.ok || !tipo.includes('application/json')) { throw new Error('HTTP ' + r.status); }
+            return r.json();
+        }
+
+        // Ingresos por mes: resultado del procedimiento SP_Reporte_Ventas (ReporteVentasDTO en JSON)
+        pedir('/api/reportes/ventas-mensuales?anio=' + ANIO).then(function (meses) {
+            let total = 0;
+            meses.forEach(function (m) { total += Number(m.totalIngresos); });
+            document.getElementById('totalAnio').textContent = soles(total);
+            new Chart(document.getElementById('graficoMeses'), {
+                type: 'bar',
+                data: { labels: meses.map(function (m) { return MESES[m.mes - 1]; }),
+                        datasets: [{ label: 'Ingresos (S/)', data: meses.map(function (m) { return m.totalIngresos; }), backgroundColor: '#0d6efd', borderRadius: 6 }] },
+                options: { responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (c) { return soles(c.parsed.y); } } } },
+                    scales: { y: { beginAtZero: true } } }
+            });
+        });
+
+        // OTs por estado (JPQL "select new" -> ConteoDTO)
+        pedir('/api/reportes/estados').then(function (datos) {
+            new Chart(document.getElementById('graficoEstados'), {
+                type: 'doughnut',
+                data: { labels: datos.map(function (d) { return d.etiqueta; }),
+                        datasets: [{ data: datos.map(function (d) { return d.cantidad; }),
+                                     backgroundColor: datos.map(function (d) { return COLOR_ESTADO[d.etiqueta] || '#6c757d'; }) }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+            });
+        });
+
+        // Servicios pedidos por categoría
+        pedir('/api/reportes/categorias').then(function (datos) {
+            new Chart(document.getElementById('graficoCategorias'), {
+                type: 'pie',
+                data: { labels: datos.map(function (d) { return d.etiqueta; }),
+                        datasets: [{ data: datos.map(function (d) { return d.cantidad; }), backgroundColor: PALETA }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+            });
+        });
+    </script>
+</body>
+
+</html>

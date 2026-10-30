@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>Boleta de Venta Electrónica</title>
+    <style type="text/css">
+        @page {
+            size: A4;
+            margin: 18mm;
+        }
+
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            color: #333333;
+            font-size: 11px;
+        }
+
+        table {
+            border-collapse: collapse;
+        }
+
+        .cabecera {
+            width: 100%;
+            border-bottom: 2px solid #0d6efd;
+            margin-bottom: 14px;
+        }
+
+        .empresa {
+            font-size: 20px;
+            font-weight: bold;
+            color: #0f172a;
+        }
+
+        .sub {
+            font-size: 10px;
+            color: #64748b;
+        }
+
+        .caja-boleta {
+            border: 2px solid #0f172a;
+            text-align: center;
+            padding: 8px;
+            background-color: #f8fafc;
+        }
+
+        .caja-boleta h3 {
+            margin: 0;
+            font-size: 13px;
+            color: #0f172a;
+        }
+
+        .caja-boleta h4 {
+            margin: 4px 0 0 0;
+            font-size: 13px;
+            color: #0d6efd;
+        }
+
+        .titulo {
+            background-color: #0f172a;
+            color: #ffffff;
+            padding: 4px 8px;
+            font-weight: bold;
+            font-size: 10px;
+            margin-top: 12px;
+        }
+
+        .info {
+            width: 100%;
+            margin-top: 6px;
+        }
+
+        .info td {
+            padding: 3px;
+            vertical-align: top;
+        }
+
+        .etiqueta {
+            font-weight: bold;
+            color: #475569;
+            width: 18%;
+        }
+
+        .items {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .items th {
+            background-color: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            padding: 6px;
+            text-align: center;
+        }
+
+        .items td {
+            border: 1px solid #e2e8f0;
+            padding: 6px;
+        }
+
+        .der {
+            text-align: right;
+        }
+
+        .cen {
+            text-align: center;
+        }
+
+        .totales {
+            width: 42%;
+            margin-left: 58%;
+            margin-top: 12px;
+        }
+
+        .totales td {
+            padding: 4px;
+            text-align: right;
+        }
+
+        .total-final td {
+            font-size: 13px;
+            font-weight: bold;
+            color: #059669;
+            border-top: 2px solid #0f172a;
+            border-bottom: 2px solid #0f172a;
+        }
+
+        .anulado {
+            margin-top: 10px;
+            padding: 6px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+            color: #b91c1c;
+            border: 2px solid #b91c1c;
+        }
+
+        .pie {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 9px;
+            color: #94a3b8;
+            border-top: 1px dashed #cbd5e1;
+            padding-top: 8px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <table class="cabecera">
+        <tr>
+            <td style="width: 60%;">
+                <div class="empresa">ELECTRÓNICA Y SUMINISTROS S.A.C.</div>
+                <div class="sub">Servicios de digitalización de video, audio y fotografía</div>
+                <div class="sub">Av. Arequipa 268, Lima 15046 - Perú</div>
+                <div class="sub">Teléfono: (01) 998-877-665 | Giancarlo_Rivas_MarcosWEB@hotmail.com</div>
+            </td>
+            <td style="width: 40%;">
+                <div class="caja-boleta">
+                    <h3>R.U.C. 20601234567</h3>
+                    <h3>BOLETA DE VENTA ELECTRÓNICA</h3>
+                    <h4 th:text="${c.numero}">B001-00000001</h4>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <div class="titulo">DATOS DEL CLIENTE Y DEL COMPROBANTE</div>
+    <table class="info">
+        <tr>
+            <td class="etiqueta">Señor(es):</td>
+            <td th:text="${c.cliente}">Cliente</td>
+            <td class="etiqueta">Fecha de emisión:</td>
+            <td th:text="${c.fechaEmision}">01/10/2026 10:00</td>
+        </tr>
+        <tr>
+            <td class="etiqueta">DNI / RUC:</td>
+            <td th:text="${c.documento}">70000001</td>
+            <td class="etiqueta">Orden de trabajo:</td>
+            <td th:text="${c.codigoOt}">OT-1001</td>
+        </tr>
+        <tr>
+            <td class="etiqueta">Moneda:</td>
+            <td>Soles (S/)</td>
+            <td class="etiqueta">Atendido por:</td>
+            <td th:text="${c.ejecutivo}">Ejecutivo</td>
+        </tr>
+    </table>
+
+    <div class="titulo">DETALLE DEL SERVICIO</div>
+    <table class="items">
+        <thead>
+            <tr>
+                <th style="width: 40%;">Descripción</th>
+                <th style="width: 14%;">Cant. / Horas</th>
+                <th style="width: 10%;">Limpieza</th>
+                <th style="width: 16%;">P. Unitario</th>
+                <th style="width: 20%;">Importe</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="l : ${c.lineas}">
+                <td th:text="'Digitalización ' + ${l.formato} + ' (' + ${l.categoria} + ')'">Digitalización VHS</td>
+                <td class="cen" th:text="${(l.categoria == 'Video' and l.horasReales != null) ? l.horasReales + ' h' : l.cantidad + ' un.'}">1</td>
+                <td class="cen" th:text="${l.limpieza == 1} ? 'Sí' : 'No'">No</td>
+                <td class="der" th:text="'S/ ' + ${#numbers.formatDecimal(l.precioUnitario, 1, 'COMMA', 2, 'POINT')}">S/ 0.00</td>
+                <td class="der" th:text="'S/ ' + ${#numbers.formatDecimal(l.subtotal, 1, 'COMMA', 2, 'POINT')}">S/ 0.00</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <table class="totales">
+        <tr>
+            <td>OP. GRAVADA (Subtotal):</td>
+            <td th:text="'S/ ' + ${#numbers.formatDecimal(c.subtotal, 1, 'COMMA', 2, 'POINT')}">S/ 0.00</td>
+        </tr>
+        <tr>
+            <td>I.G.V. (18%):</td>
+            <td th:text="'S/ ' + ${#numbers.formatDecimal(c.igv, 1, 'COMMA', 2, 'POINT')}">S/ 0.00</td>
+        </tr>
+        <tr class="total-final">
+            <td>IMPORTE TOTAL:</td>
+            <td th:text="'S/ ' + ${#numbers.formatDecimal(c.total, 1, 'COMMA', 2, 'POINT')}">S/ 0.00</td>
+        </tr>
+    </table>
+
+    <div class="pie">
+        <p>Gracias por confiar sus recuerdos a <b>Electrónica y Suministros S.A.C.</b></p>
+        <p>Representación impresa de la Boleta de Venta Electrónica generada desde el sistema web de gestión de servicios de digitalización (proyecto académico).</p>
+    </div>
+
+</body>
+
+</html>

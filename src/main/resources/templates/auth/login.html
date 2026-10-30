@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+
+<head th:replace="~{fragments/header :: head('Acceso al sistema')}"></head>
+
+<body class="d-flex align-items-center justify-content-center py-5"
+    style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); min-height: 100vh;">
+    <main class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-5 col-lg-4 col-11">
+
+                <!-- ALERTAS: las envía AuthController -->
+                <div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMsg}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+                </div>
+                <div th:if="${logoutMsg}" class="alert alert-info alert-dismissible fade show shadow-sm" role="alert">
+                    <i class="bi bi-info-circle-fill me-2"></i><span th:text="${logoutMsg}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+                </div>
+                <div th:if="${denegadoMsg}" class="alert alert-warning alert-dismissible fade show shadow-sm" role="alert">
+                    <i class="bi bi-shield-exclamation me-2"></i><span th:text="${denegadoMsg}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+                </div>
+
+                <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+                    <div class="card-header bg-dark text-white text-center py-4 border-bottom border-warning">
+                        <i class="bi bi-disc-fill text-warning fs-1 d-block mb-2"></i>
+                        <h4 class="fw-bold mb-0">Electrónica y Suministros</h4>
+                        <small class="text-secondary">Intranet de recepción, laboratorio y gerencia</small>
+                    </div>
+
+                    <div class="card-body p-4">
+                        <form th:action="@{/login}" method="post">
+                            <div class="mb-3">
+                                <label for="txtCorreo" class="form-label fw-bold small">Correo electrónico *</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light"><i class="bi bi-envelope"></i></span>
+                                    <input type="email" class="form-control" id="txtCorreo" name="correo"
+                                        placeholder="ejecutivo@tienda.com" required>
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <label for="txtPassword" class="form-label fw-bold small">Contraseña *</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light"><i class="bi bi-key"></i></span>
+                                    <input type="password" class="form-control" id="txtPassword" name="password"
+                                        placeholder="••••••" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100 fw-bold py-2 shadow-sm">
+                                <i class="bi bi-box-arrow-in-right me-2"></i>Ingresar al sistema
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="card-footer bg-light text-center py-3">
+                        <a th:href="@{/}" class="text-decoration-none text-muted small">
+                            <i class="bi bi-arrow-left me-1"></i>Volver al sitio público
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <th:block th:replace="~{fragments/footer :: scripts}"></th:block>
+</body>
+
+</html>

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+
+<head th:replace="~{fragments/header :: head('Consulta en cascada')}"></head>
+
+<body class="bg-light">
+    <div class="d-flex">
+        <th:block th:replace="~{fragments/sidebar :: sidebar('consulta')}"></th:block>
+
+        <main class="flex-grow-1 p-4 overflow-auto" style="height: 100vh;">
+
+            <div class="mb-4">
+                <h2 class="fw-bold mb-0"><i class="bi bi-diagram-3 text-info me-2"></i>Consulta de OTs en cascada</h2>
+                <small class="text-muted">
+                    Elija un cliente, luego una de sus órdenes de trabajo y se mostrará su detalle.
+                    Cada combo se llena por AJAX consultando <code>/api/ordenes</code>.
+                </small>
+            </div>
+
+            <div class="card shadow-sm border-0 rounded-4 mb-4">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-5">
+                            <label for="selCliente" class="form-label fw-semibold">1. Cliente</label>
+                            <select id="selCliente" class="form-select">
+                                <option value="">Cargando clientes...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-7">
+                            <label for="selOt" class="form-label fw-semibold">2. Orden de trabajo</label>
+                            <select id="selOt" class="form-select" disabled>
+                                <option value="">Primero elija un cliente</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RESULTADO -->
+            <div id="panelResultado" class="d-none">
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="card border-0 rounded-3 bg-dark text-white shadow-sm p-3 h-100">
+                            <span class="small text-uppercase fw-semibold opacity-75">Orden</span>
+                            <span class="fs-4 fw-bold lh-1" id="resCodigo">OT-0000</span>
+                            <span class="small mt-1" id="resFecha"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 rounded-3 shadow-sm p-3 h-100">
+                            <span class="small text-uppercase fw-semibold text-muted">Estado</span>
+                            <span id="resEstado"></span>
+                            <span class="small text-muted mt-1" id="resFormatos"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-0 rounded-3 bg-primary text-white shadow-sm p-3 h-100">
+                            <span class="small text-uppercase fw-semibold opacity-75">Monto de la OT</span>
+                            <span class="fs-3 fw-bold lh-1" id="resMonto">S/ 0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm border-0 rounded-4">
+                    <div class="card-header bg-dark text-white fw-bold">
+                        <i class="bi bi-list-check text-warning me-2"></i>3. Detalle de la orden
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover align-middle mb-0">
+                            <thead class="table-dark small">
+                                <tr>
+                                    <th>Formato</th>
+                                    <th>Categoría</th>
+                                    <th class="text-center">Cant.</th>
+                                    <th class="text-end">Precio unit.</th>
+                                    <th class="text-center">Limpieza</th>
+                                    <th class="text-center">Horas reales</th>
+                                    <th class="text-center">GB</th>
+                                    <th>Entrega</th>
+                                    <th class="text-end">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyDetalle"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="panelVacio" class="text-center text-muted py-5">
+                <i class="bi bi-arrow-up-circle fs-1 d-block mb-2"></i>Seleccione un cliente y una orden para ver su detalle.
+            </div>
+        </main>
+    </div>
+
+    <th:block th:replace="~{fragments/footer :: scripts}"></th:block>
+    <script>
+        const selCliente = document.getElementById('selCliente');
+        const selOt = document.getElementById('selOt');
+        let ordenes = [];       // OTs del cliente elegido
+
+        const soles = (v) => 'S/ ' + Number(v).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const COLORES = { 'En Recepción': 'bg-warning text-dark', 'Por Notificar': 'bg-info text-dark', 'Finalizado': 'bg-success', 'Cancelado': 'bg-danger' };
+
+        async function pedir(url) {
+            const r = await fetch(url);
+            const tipo = r.headers.get('content-type') || '';
+            if (!r.ok || !tipo.includes('application/json')) { throw new Error('HTTP ' + r.status); }
+            return r.json();
+        }
+
+        // ---------- NIVEL 1: clientes (JPQL select new -> ClienteResumenDTO) ----------
+        (async function () {
+            try {
+                const clientes = await pedir('/api/ordenes/clientes');
+                selCliente.innerHTML = '<option value="">Seleccione un cliente...</option>';
+                clientes.forEach(function (c) {
+                    const op = document.createElement('option');
+                    op.value = c.idCliente;
+                    op.textContent = c.nombres + ' (' + c.dniCliente + ') - ' + c.cantidadOrdenes + ' OT vigente(s), ' + soles(c.montoTotal);
+                    selCliente.appendChild(op);
+                });
+            } catch (e) {
+                selCliente.innerHTML = '<option value="">No se pudo cargar (¿sesión vencida?)</option>';
+            }
+        })();
+
+        // ---------- NIVEL 2: OTs del cliente ----------
+        selCliente.addEventListener('change', async function () {
+            limpiarResultado();
+            ordenes = [];
+            if (!this.value) {
+                selOt.innerHTML = '<option value="">Primero elija un cliente</option>';
+                selOt.disabled = true;
+                return;
+            }
+            selOt.innerHTML = '<option value="">Cargando...</option>';
+            ordenes = await pedir('/api/ordenes/cliente/' + this.value);
+            selOt.innerHTML = '<option value="">Seleccione una orden...</option>';
+            ordenes.forEach(function (o) {
+                const op = document.createElement('option');
+                op.value = o.idOt;
+                op.textContent = o.codigoOt + ' · ' + o.fecha + ' · ' + o.estado + ' · ' + soles(o.monto);
+                selOt.appendChild(op);
+            });
+            selOt.disabled = false;
+        });
+
+        // ---------- NIVEL 3: detalle de la OT ----------
+        selOt.addEventListener('change', async function () {
+            limpiarResultado();
+            const o = ordenes.find(function (x) { return String(x.idOt) === selOt.value; });
+            if (!o) { return; }
+            const lineas = await pedir('/api/ordenes/' + o.idOt + '/detalle');
+
+            document.getElementById('resCodigo').textContent = o.codigoOt;
+            document.getElementById('resFecha').textContent = 'Recepción: ' + o.fecha;
+            document.getElementById('resEstado').innerHTML = '<span class="badge fs-6 align-self-start ' + (COLORES[o.estado] || 'bg-secondary') + '"></span>';
+            document.getElementById('resEstado').firstChild.textContent = o.estado;
+            document.getElementById('resFormatos').textContent = o.formatos;
+            document.getElementById('resMonto').textContent = soles(o.monto);
+
+            const tbody = document.getElementById('tbodyDetalle');
+            tbody.innerHTML = '';
+            lineas.forEach(function (l) {
+                const tr = document.createElement('tr');
+                const celdas = [l.formato, l.categoria, l.cantidad, soles(l.precioUnitario), l.limpieza ? 'Sí' : 'No',
+                                l.horasReales != null ? l.horasReales : '—', l.pesoGb != null ? l.pesoGb : '—',
+                                l.medioEntrega || '—', soles(l.subtotal)];
+                celdas.forEach(function (v, k) {
+                    const td = document.createElement('td');
+                    td.textContent = v;
+                    if (k === 0) td.className = 'fw-semibold';
+                    if (k === 2 || k === 4 || k === 5 || k === 6) td.className = 'text-center';
+                    if (k === 3 || k === 8) td.className = 'text-end fw-semibold';
+                    if (k === 7) td.className = 'small';
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+            document.getElementById('panelResultado').classList.remove('d-none');
+            document.getElementById('panelVacio').classList.add('d-none');
+        });
+
+        function limpiarResultado() {
+            document.getElementById('panelResultado').classList.add('d-none');
+            document.getElementById('panelVacio').classList.remove('d-none');
+        }
+    </script>
+</body>
+
+</html>

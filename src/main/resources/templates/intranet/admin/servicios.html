@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+
+<head th:replace="~{fragments/header :: head('Tarifario de servicios')}"></head>
+
+<body class="bg-light">
+    <div class="d-flex">
+        <th:block th:replace="~{fragments/sidebar :: sidebar('servicios')}"></th:block>
+
+        <main class="flex-grow-1 p-4 overflow-auto" style="height: 100vh;">
+
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+                <div>
+                    <h2 class="fw-bold mb-0"><i class="bi bi-tags text-success me-2"></i>Tarifario de servicios</h2>
+                    <small class="text-muted">
+                        Precio base de cada formato. El alta usa el procedimiento <code>SP_Registrar_Servicio</code>, que genera el código ST014.
+                        Las OTs ya registradas conservan la tarifa con la que se recibieron.
+                    </small>
+                </div>
+                <button type="button" class="btn btn-success fw-semibold" onclick="nuevoServicio()">
+                    <i class="bi bi-plus-circle me-1"></i>Nuevo servicio
+                </button>
+            </div>
+
+            <div th:replace="~{fragments/header :: alertas}"></div>
+
+            <div class="card shadow-sm border-0 rounded-4 mb-4">
+                <div class="card-body">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-4">
+                            <label for="filtroCategoria" class="form-label small fw-semibold">Filtrar por categoría</label>
+                            <select id="filtroCategoria" class="form-select">
+                                <option value="">Todas</option>
+                                <option th:each="c : ${categorias}" th:value="${c.nombreCategoria}" th:text="${c.nombreCategoria}">Video</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle mb-0">
+                        <thead class="table-dark small">
+                            <tr>
+                                <th></th>
+                                <th>Código</th>
+                                <th>Formato</th>
+                                <th>Categoría</th>
+                                <th>Tipo de cobro</th>
+                                <th class="text-end">Precio base</th>
+                                <th class="text-center">Usos en OTs</th>
+                                <th class="text-center">Estado</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyServicios">
+                            <tr th:each="s : ${servicios}" th:data-categoria="${s.categoria}">
+                                <td style="width: 60px;">
+                                    <img th:src="@{'/assets/img/' + ${s.imagen}}" th:alt="${s.formato}" width="44" height="44"
+                                        class="rounded border bg-white" style="object-fit: contain;">
+                                </td>
+                                <td class="fw-semibold" th:text="${s.codigo}">ST001</td>
+                                <td class="fw-semibold" th:text="${s.formato}">VHS</td>
+                                <td><span class="badge bg-secondary" th:text="${s.categoria}">Video</span></td>
+                                <td class="small" th:text="${s.tipoCobro}">Por Hora o Fracción</td>
+                                <td class="text-end fw-semibold" th:text="'S/ ' + ${#numbers.formatDecimal(s.precioUnitario, 1, 'COMMA', 2, 'POINT')}">S/ 0.00</td>
+                                <td class="text-center"><span class="badge bg-info text-dark" th:text="${s.usos}">0</span></td>
+                                <td class="text-center">
+                                    <span class="badge" th:classappend="${s.estado == 'ACTIVO'} ? 'bg-success' : 'bg-secondary'" th:text="${s.estado}">ACTIVO</span>
+                                </td>
+                                <td class="text-center text-nowrap">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" title="Editar"
+                                        th:data-id="${s.idServicio}" th:data-categoria="${s.idCategoria}"
+                                        th:data-formato="${s.formato}" th:data-cobro="${s.tipoCobro}"
+                                        th:data-precio="${s.precioUnitario}" th:data-imagen="${s.imagen}"
+                                        th:data-estado="${s.estado}" onclick="editarServicio(this)">
+                                        <i class="bi bi-pencil-square"></i></button>
+                                    <form th:action="@{/admin/servicios/eliminar/{id}(id=${s.idServicio})}" method="post" class="d-inline"
+                                        onsubmit="return confirm('¿Eliminar este servicio? Si ya se usó en alguna OT solo se desactivará.');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
+                                            <i class="bi bi-trash"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL: alta y edición -->
+    <div class="modal fade" id="modalServicio" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form class="modal-content" th:action="@{/admin/servicios/guardar}" method="post">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title" id="tituloModalServicio">Nuevo servicio</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="idServicio" id="fId">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Categoría *</label>
+                            <select name="idCategoria" id="fCategoria" class="form-select" required>
+                                <option th:each="c : ${categorias}" th:value="${c.idCategoria}" th:text="${c.nombreCategoria}">Video</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Formato *</label>
+                            <input type="text" name="formato" id="fFormato" class="form-control" maxlength="50" required>
+                        </div>
+                        <div class="col-md-7">
+                            <label class="form-label fw-semibold">Tipo de cobro *</label>
+                            <select name="tipoCobro" id="fCobro" class="form-select" required>
+                                <option th:each="t : ${cobros}" th:value="${t}" th:text="${t}">Por Unidad</option>
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label fw-semibold">Precio (S/) *</label>
+                            <input type="number" name="precioUnitario" id="fPrecio" class="form-control" step="0.01" min="0.01" max="9999.99" required>
+                        </div>
+                        <div class="col-md-7">
+                            <label class="form-label fw-semibold">Imagen</label>
+                            <input type="text" name="imagen" id="fImagen" class="form-control" maxlength="80" placeholder="vhs.jpg">
+                            <div class="form-text">Archivo dentro de static/assets/img.</div>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label fw-semibold">Estado</label>
+                            <select name="estado" id="fEstado" class="form-select">
+                                <option value="ACTIVO">ACTIVO</option>
+                                <option value="INACTIVO">INACTIVO</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success fw-semibold"><i class="bi bi-save me-1"></i>Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <th:block th:replace="~{fragments/footer :: scripts}"></th:block>
+    <script>
+        const modalServicio = new bootstrap.Modal(document.getElementById('modalServicio'));
+
+        function nuevoServicio() {
+            document.getElementById('tituloModalServicio').textContent = 'Nuevo servicio';
+            ['fId', 'fFormato', 'fPrecio', 'fImagen'].forEach(function (i) { document.getElementById(i).value = ''; });
+            document.getElementById('fCategoria').selectedIndex = 0;
+            document.getElementById('fCobro').selectedIndex = 0;
+            document.getElementById('fEstado').value = 'ACTIVO';
+            modalServicio.show();
+        }
+
+        function editarServicio(btn) {
+            const d = btn.dataset;
+            document.getElementById('tituloModalServicio').textContent = 'Editar servicio';
+            document.getElementById('fId').value = d.id;
+            document.getElementById('fCategoria').value = d.categoria;
+            document.getElementById('fFormato').value = d.formato;
+            document.getElementById('fCobro').value = d.cobro;
+            document.getElementById('fPrecio').value = d.precio;
+            document.getElementById('fImagen').value = d.imagen || '';
+            document.getElementById('fEstado').value = d.estado;
+            modalServicio.show();
+        }
+
+        // Filtro por categoría (en el navegador)
+        document.getElementById('filtroCategoria').addEventListener('change', function () {
+            const cat = this.value;
+            document.querySelectorAll('#tbodyServicios tr').forEach(function (tr) {
+                tr.style.display = (!cat || tr.dataset.categoria === cat) ? '' : 'none';
+            });
+        });
+    </script>
+</body>
+
+</html>

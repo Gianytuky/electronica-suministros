@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+
+<head th:replace="~{fragments/header :: head('Panel de captura')}"></head>
+
+<body class="bg-light">
+    <div class="d-flex">
+        <th:block th:replace="~{fragments/sidebar :: sidebar('panel')}"></th:block>
+
+        <main class="flex-grow-1 p-4 overflow-auto" style="height: 100vh;">
+
+            <div class="mb-4">
+                <h2 class="fw-bold mb-0"><i class="bi bi-cpu text-success me-2"></i>Panel del laboratorio</h2>
+                <small class="text-muted">
+                    Cola de OTs <strong>En Recepción</strong> pendientes de captura. Al capturar todas las líneas de una OT,
+                    el sistema recalcula el total y la pasa a <strong>Por Notificar</strong>.
+                </small>
+            </div>
+
+            <div th:replace="~{fragments/header :: alertas}"></div>
+
+            <!-- KPIs -->
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-xl-3">
+                    <div class="card border-0 rounded-3 bg-warning shadow-sm p-3 h-100 text-dark">
+                        <span class="small text-uppercase fw-semibold opacity-75">OTs pendientes</span>
+                        <span class="fs-3 fw-bold lh-1" th:text="${#lists.size(cola)}">0</span>
+                    </div>
+                </div>
+                <div class="col-6 col-xl-3">
+                    <div class="card border-0 rounded-3 bg-primary shadow-sm p-3 h-100 text-white">
+                        <span class="small text-uppercase fw-semibold opacity-75">Horas capturadas</span>
+                        <span class="fs-3 fw-bold lh-1" th:text="${totalHoras} + ' h'">0 h</span>
+                    </div>
+                </div>
+                <div class="col-6 col-xl-3">
+                    <div class="card border-0 rounded-3 bg-success shadow-sm p-3 h-100 text-white">
+                        <span class="small text-uppercase fw-semibold opacity-75">Datos generados</span>
+                        <span class="fs-3 fw-bold lh-1" th:text="${totalGb} + ' GB'">0 GB</span>
+                    </div>
+                </div>
+                <div class="col-6 col-xl-3">
+                    <a th:href="@{/tecnico/historial}" class="text-decoration-none">
+                        <div class="card border-0 rounded-3 bg-secondary shadow-sm p-3 h-100 text-white">
+                            <span class="small text-uppercase fw-semibold opacity-75">Historial</span>
+                            <span class="fs-5 fw-bold lh-1">Ver capturas <i class="bi bi-arrow-right"></i></span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- COLA DE TRABAJO -->
+            <div class="card shadow-sm border-0 rounded-4 mb-4">
+                <div class="card-header bg-dark text-white fw-bold">
+                    <i class="bi bi-inboxes text-warning me-2"></i>Cola de trabajo (En Recepción)
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle mb-0">
+                        <thead class="table-dark small">
+                            <tr>
+                                <th>OT</th>
+                                <th>Recepción</th>
+                                <th>Cliente</th>
+                                <th>Formatos recibidos</th>
+                                <th class="text-center">Avance</th>
+                                <th class="text-end">Monto estimado</th>
+                                <th class="text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="o : ${cola}">
+                                <td class="fw-bold text-nowrap" th:text="${o.codigoOt}">OT-1037</td>
+                                <td class="small text-nowrap" th:text="${o.fechaRecepcion}">01/10/2026 10:00</td>
+                                <td th:text="${o.cliente}">Cliente</td>
+                                <td class="small" th:text="${o.formatos}">VHS</td>
+                                <td class="text-center">
+                                    <span class="badge bg-secondary" th:text="${o.capturadas} + ' / ' + ${o.lineas} + ' líneas'">0 / 1</span>
+                                </td>
+                                <td class="text-end" th:text="'S/ ' + ${#numbers.formatDecimal(o.montoEstimado, 1, 'COMMA', 2, 'POINT')}">S/ 0.00</td>
+                                <td class="text-center">
+                                    <a th:href="@{/tecnico/ordenes/{id}(id=${o.idOt})}" class="btn btn-sm btn-success fw-semibold">
+                                        <i class="bi bi-record-circle me-1"></i>Capturar</a>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(cola)}">
+                                <td colspan="7" class="text-center text-muted py-4">
+                                    <i class="bi bi-check2-circle fs-3 d-block"></i>No hay OTs pendientes. ¡Todo el material fue procesado!
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ÚLTIMAS CAPTURAS -->
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-header bg-white fw-semibold"><i class="bi bi-clock-history me-2 text-info"></i>Últimas capturas registradas</div>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead class="table-light">
+                            <tr><th>Fecha</th><th>OT</th><th>Formato</th><th class="text-center">Horas</th><th class="text-center">GB</th><th>Entrega</th><th>Técnico</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="c : ${capturas}">
+                                <td class="small text-nowrap" th:text="${c.fecha}">01/10/2026</td>
+                                <td class="fw-semibold" th:text="${c.codigoOt}">OT-1001</td>
+                                <td th:text="${c.formato}">VHS</td>
+                                <td class="text-center" th:text="${c.horas}">1.0</td>
+                                <td class="text-center" th:text="${c.pesoGb}">2.5</td>
+                                <td class="small" th:text="${c.medioEntrega}">USB</td>
+                                <td class="small" th:text="${c.tecnico}">Técnico</td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(capturas)}">
+                                <td colspan="7" class="text-center text-muted py-3">Todavía no hay capturas.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <th:block th:replace="~{fragments/footer :: scripts}"></th:block>
+</body>
+
+</html>

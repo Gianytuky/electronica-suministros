@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+
+<!--
+  Página de error 403. Spring Boot (BasicErrorController) la muestra automáticamente
+  cuando el estado HTTP es 403, porque está en templates/error/403.html.
+  No se imprime ninguna traza técnica: solo un mensaje amigable.
+-->
+<head th:replace="~{fragments/header :: head('Error 403')}"></head>
+
+<body class="d-flex align-items-center justify-content-center py-5"
+    style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); min-height: 100vh;">
+    <main class="container text-center text-white">
+        <i class="bi bi-shield-lock text-warning" style="font-size: 3.5rem;"></i>
+        <div class="display-1 fw-bold text-warning mt-2">403</div>
+        <h2 class="fw-bold mt-2">Acceso denegado</h2>
+        <p class="text-secondary mx-auto mt-3" style="max-width: 520px;">Su rol no tiene permiso para entrar a este módulo. Si cree que es un error, inicie sesión con otra cuenta.</p>
+        <div class="d-flex flex-wrap justify-content-center gap-2 mt-4">
+            <a th:href="@{/}" class="btn btn-warning fw-semibold"><i class="bi bi-house-door me-2"></i>Ir al inicio</a>
+                    <a th:href="@{/login}" class="btn btn-outline-light"><i class="bi bi-person-lock me-2"></i>Cambiar de cuenta</a>
+            <a href="javascript:history.back()" class="btn btn-outline-light"><i class="bi bi-arrow-left me-2"></i>Volver</a>
+        </div>
+    </main>
+</body>
+
+</html>
