@@ -260,7 +260,12 @@
             const metodo = idOt ? 'PUT' : 'POST';
             this.disabled = true;
             try {
-                const r = await fetch(url, { method: metodo, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cuerpo) });
+                // Spring Security: las peticiones que modifican datos llevan el token CSRF (etiquetas meta de fragments/header)
+                const cabeceras = { 'Content-Type': 'application/json' };
+                const csrfToken = document.querySelector('meta[name="_csrf"]');
+                const csrfHeader = document.querySelector('meta[name="_csrf_header"]');
+                if (csrfToken && csrfHeader) { cabeceras[csrfHeader.content] = csrfToken.content; }
+                const r = await fetch(url, { method: metodo, headers: cabeceras, body: JSON.stringify(cuerpo) });
                 const datos = await r.json();
                 if (!r.ok) { alerta('danger', datos.error || 'No se pudo guardar la OT.'); this.disabled = false; return; }
                 alerta('success', datos.mensaje + ' Monto estimado: ' + soles(datos.monto) + '. Redirigiendo...');

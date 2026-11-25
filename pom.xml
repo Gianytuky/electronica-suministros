@@ -14,7 +14,7 @@
     <artifactId>suministros</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>suministros</name>
-    <description>MultiMedia Digital - Tercer Avance (Spring Boot + JPA + MySQL): servicios de digitalización multimedia con Órdenes de Trabajo</description>
+    <description>MultiMedia Digital - Avance Final (Spring Boot + JPA + MySQL + Spring Security): servicios de digitalización multimedia con Órdenes de Trabajo</description>
 
     <properties>
         <java.version>21</java.version>
@@ -43,6 +43,18 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- Avance final: JavaMailSender (avisos de OT lista, recuperación de contraseña y respuestas a consultas) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
+        <!-- Avance final: Spring Security (inicio de sesión, roles, contraseñas BCrypt y protección CSRF) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
         <!-- Driver de MySQL (XAMPP en local, Aiven / Clever Cloud en la nube) -->

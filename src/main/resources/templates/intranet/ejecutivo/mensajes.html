@@ -64,11 +64,19 @@
                                 </td>
                                 <td class="text-center text-nowrap">
                                     <button type="button" class="btn btn-sm btn-outline-primary" title="Leer"
+                                        th:data-id="${m.idMensaje}"
                                         th:data-nombre="${m.nombre}" th:data-correo="${m.correo}"
                                         th:data-telefono="${m.telefono}" th:data-mensaje="${m.mensaje}"
                                         th:data-fecha="${#temporals.format(m.fechaEnvio, 'dd/MM/yyyy HH:mm')}"
                                         onclick="verMensaje(this)">
                                         <i class="bi bi-envelope-open"></i></button>
+                                    <!-- Avance final: responder la consulta por correo (JavaMailSender) -->
+                                    <button type="button" class="btn btn-sm btn-outline-warning" title="Responder por correo"
+                                        th:data-id="${m.idMensaje}"
+                                        th:data-nombre="${m.nombre}" th:data-correo="${m.correo}"
+                                        th:data-mensaje="${m.mensaje}"
+                                        onclick="abrirRespuesta(this)">
+                                        <i class="bi bi-reply-fill"></i></button>
                                     <form th:if="${m.estado == 'NUEVO'}"
                                         th:action="@{/ejecutivo/mensajes/leido/{id}(id=${m.idMensaje})}" method="post"
                                         class="d-inline">
@@ -106,25 +114,101 @@
                     <div id="mTexto" class="border rounded-3 p-3 bg-light" style="white-space: pre-wrap;"></div>
                 </div>
                 <div class="modal-footer">
-                    <a id="mResponder" href="#" class="btn btn-primary"><i class="bi bi-reply me-1"></i>Responder por correo</a>
+                    <button type="button" class="btn btn-primary" onclick="responderDesdeLectura()">
+                        <i class="bi bi-reply me-1"></i>Responder por correo</button>
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- MODAL (avance final): responder la consulta por correo. Envía POST /ejecutivo/mensajes/responder -->
+    <div class="modal fade" id="modalResponder" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <form id="formResponder" class="modal-content" th:action="@{/ejecutivo/mensajes/responder}" method="post">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title"><i class="bi bi-reply-fill me-2 text-warning"></i>Responder por correo</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="idMensaje" id="rIdMensaje">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Para</label>
+                        <input type="text" class="form-control bg-light" id="rPara" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="rAsunto" class="form-label small fw-semibold">Asunto *</label>
+                        <input type="text" class="form-control" id="rAsunto" name="asunto" maxlength="150" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="rRespuesta" class="form-label small fw-semibold">Respuesta *</label>
+                        <textarea class="form-control" id="rRespuesta" name="respuesta" rows="6" maxlength="3000"
+                            placeholder="Escriba su respuesta al cliente..." required></textarea>
+                        <div class="form-text">Se enviará firmada con su nombre e incluirá la consulta original al final.</div>
+                    </div>
+                    <div>
+                        <div class="small text-muted mb-1"><i class="bi bi-chat-quote me-1"></i>Consulta original</div>
+                        <div id="rOriginal" class="border rounded-3 p-2 bg-light small text-muted"
+                            style="white-space: pre-wrap; max-height: 120px; overflow-y: auto;"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary" id="btnEnviarRespuesta">
+                        <i class="bi bi-send me-1"></i>Enviar respuesta</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <th:block th:replace="~{fragments/footer :: scripts}"></th:block>
     <script>
         const modalMensaje = new bootstrap.Modal(document.getElementById('modalMensaje'));
+        const modalResponder = new bootstrap.Modal(document.getElementById('modalResponder'));
+        const textoBotonEnviar = document.getElementById('btnEnviarRespuesta').innerHTML;
+        let consultaActual = null;
+
         function verMensaje(btn) {
             const d = btn.dataset;
+            consultaActual = d;
             document.getElementById('mNombre').textContent = d.nombre + ' <' + d.correo + '>';
             document.getElementById('mFecha').textContent = d.fecha;
             document.getElementById('mTelefono').textContent = d.telefono || 'Sin teléfono';
             document.getElementById('mTexto').textContent = d.mensaje;
-            document.getElementById('mResponder').href = 'mailto:' + d.correo + '?subject=' + encodeURIComponent('Respuesta a su consulta - Electrónica y Suministros');
             modalMensaje.show();
         }
+
+        // Abre el modal de respuesta con los datos de la consulta
+        function responder(d) {
+            document.getElementById('rIdMensaje').value = d.id;
+            document.getElementById('rPara').value = d.nombre + ' <' + d.correo + '>';
+            document.getElementById('rAsunto').value = 'Respuesta a su consulta - Electrónica y Suministros';
+            document.getElementById('rRespuesta').value = '';
+            document.getElementById('rOriginal').textContent = d.mensaje;
+            const btnEnviar = document.getElementById('btnEnviarRespuesta');
+            btnEnviar.disabled = false;
+            btnEnviar.innerHTML = textoBotonEnviar;
+            modalResponder.show();
+        }
+
+        function abrirRespuesta(btn) {
+            responder(btn.dataset);
+        }
+
+        // Desde el modal de lectura: se cierra y, cuando termina de cerrarse, se abre el de respuesta
+        function responderDesdeLectura() {
+            if (!consultaActual) { return; }
+            document.getElementById('modalMensaje').addEventListener('hidden.bs.modal',
+                function () { responder(consultaActual); }, { once: true });
+            modalMensaje.hide();
+        }
+
+        // Evita doble clic mientras el servidor habla con el SMTP
+        document.getElementById('formResponder').addEventListener('submit', function () {
+            const btnEnviar = document.getElementById('btnEnviarRespuesta');
+            btnEnviar.disabled = true;
+            btnEnviar.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Enviando...';
+        });
     </script>
 </body>
 

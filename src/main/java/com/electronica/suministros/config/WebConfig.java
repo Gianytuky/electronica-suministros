@@ -38,6 +38,7 @@ public class WebConfig implements WebMvcConfigurer {
                         "/ejecutivo/**",
                         "/tecnico/**",
                         "/api/ordenes/**",
-                        "/api/reportes/**");
+                        "/api/reportes/**",
+                        "/api/reniec/**");   // Avance final: consulta RENIEC (ApiPeru.dev)
     }
 }

@@ -120,6 +120,15 @@
                                         class="btn btn-sm btn-outline-danger" th:title="'Boleta ' + ${o.numeroComprobante}">
                                         <i class="bi bi-file-earmark-pdf"></i></a>
 
+                                    <!-- Avance final: enviar la boleta en PDF al correo del cliente -->
+                                    <form th:if="${o.estado == 'Finalizado'}"
+                                        th:action="@{/ejecutivo/ordenes/{id}/enviar-boleta(id=${o.idOt})}" method="post"
+                                        class="d-inline"
+                                        onsubmit="if (!confirm('¿Enviar la boleta por correo al cliente?')) return false; this.querySelector('button').disabled = true; return true;">
+                                        <button type="submit" class="btn btn-sm btn-outline-primary" title="Enviar boleta por correo">
+                                            <i class="bi bi-envelope-paper"></i></button>
+                                    </form>
+
                                     <form th:if="${o.estado == 'En Recepción' or o.estado == 'Por Notificar'}"
                                         th:action="@{/ejecutivo/ordenes/{id}/cancelar(id=${o.idOt})}" method="post"
                                         class="d-inline"

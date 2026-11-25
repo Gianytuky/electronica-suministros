@@ -12,7 +12,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import com.electronica.suministros.config.AuthInterceptor;
+import com.electronica.suministros.dto.UsuarioSesionDTO;
 import com.electronica.suministros.service.MensajeContactoService;
+import com.electronica.suministros.service.NegocioException;
+
+import jakarta.servlet.http.HttpSession;
 
 /** Bandeja de consultas recibidas desde el formulario público (EJECUTIVO y ADMIN). */
 @Controller
@@ -39,6 +44,23 @@ public class MensajeController {
     public String marcarLeido(@PathVariable Integer id, RedirectAttributes flash) {
         mensajeService.marcarLeido(id);
         flash.addFlashAttribute("ok", "Mensaje marcado como leído.");
+        return "redirect:/ejecutivo/mensajes";
+    }
+
+    /** Avance final: responde la consulta por correo (modal "Responder" de mensajes.html). */
+    @PostMapping("/responder")
+    public String responder(@RequestParam Integer idMensaje,
+                            @RequestParam String asunto,
+                            @RequestParam String respuesta,
+                            HttpSession session,
+                            RedirectAttributes flash) {
+        UsuarioSesionDTO actual = (UsuarioSesionDTO) session.getAttribute(AuthInterceptor.ATRIBUTO_SESION);
+        try {
+            String destino = mensajeService.responder(idMensaje, asunto, respuesta, actual.getNombres());
+            flash.addFlashAttribute("ok", "Respuesta enviada por correo a " + destino + ". La consulta quedó marcada como leída.");
+        } catch (NegocioException e) {
+            flash.addFlashAttribute("error", e.getMessage());
+        }
         return "redirect:/ejecutivo/mensajes";
     }
 

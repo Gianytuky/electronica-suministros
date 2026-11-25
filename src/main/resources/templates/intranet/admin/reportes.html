@@ -1,4 +1,11 @@
 <!DOCTYPE html>
+<!--
+  Avance final (integraciones): la interfaz analítica de Reportes es una mini-aplicación React + Vite
+  (carpeta frontend-reportes/). "npm run build" la compila hacia src/main/resources/static/react-reportes/,
+  y Spring Boot la sirve como recurso estático. Esta plantilla conserva el layout de la intranet (sidebar)
+  y la seguridad: /admin/reportes y /api/reportes/** siguen protegidos por AuthInterceptor (solo ADMIN).
+  La app consume /api/reportes/ventas-mensuales, /api/reportes/formatos y /api/reportes/analisis (Python).
+-->
 <html xmlns:th="http://www.thymeleaf.org" lang="es">
 
 <head th:replace="~{fragments/header :: head('Reportes de ventas')}"></head>
@@ -8,259 +15,19 @@
         <th:block th:replace="~{fragments/sidebar :: sidebar('reportes')}"></th:block>
 
         <main class="flex-grow-1 p-4 overflow-auto" style="height: 100vh;">
-
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
-                <div>
-                    <h2 class="fw-bold mb-0"><i class="bi bi-bar-chart-line text-warning me-2"></i>Reportes de ventas</h2>
-                    <small class="text-muted">
-                        Cambie el año y los gráficos se actualizan por AJAX consultando
-                        <code>/api/reportes/ventas-mensuales</code> (SP_Reporte_Ventas). Solo cuentan las OTs ya cobradas.
-                    </small>
-                </div>
-                <div class="d-flex align-items-center gap-2">
-                    <label for="selAnio" class="fw-semibold mb-0">Año:</label>
-                    <select id="selAnio" class="form-select" style="width: auto;">
-                        <option th:each="a : ${anios}" th:value="${a}" th:text="${a}" th:selected="${a == anio}">2026</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="row g-4 mb-4">
-                <div class="col-lg-7">
-                    <div class="card shadow-sm border-0 rounded-4 h-100">
-                        <div class="card-header bg-dark text-white fw-bold">
-                            <i class="bi bi-bar-chart-fill text-warning me-2"></i>Ingresos por mes (S/)
-                        </div>
-                        <div class="card-body"><div style="position: relative; height: 300px;"><canvas id="graficoBarras"></canvas></div></div>
-                    </div>
-                </div>
-                <div class="col-lg-5">
-                    <div class="card shadow-sm border-0 rounded-4 h-100">
-                        <div class="card-header bg-dark text-white fw-bold d-flex justify-content-between align-items-center">
-                            <span><i class="bi bi-pie-chart-fill text-info me-2"></i>Ingresos por formato</span>
-                            <select id="selTipoCirculo" class="form-select form-select-sm" style="width: auto;">
-                                <option value="doughnut">Rosquilla</option>
-                                <option value="pie">Torta</option>
-                            </select>
-                        </div>
-                        <div class="card-body"><div style="position: relative; height: 300px;"><canvas id="graficoCirculo"></canvas></div></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row g-4 mb-4">
-                <div class="col-lg-6">
-                    <div class="card shadow-sm border-0 rounded-4 h-100">
-                        <div class="card-header bg-dark text-white fw-bold">
-                            <i class="bi bi-graph-up text-success me-2"></i>OTs cobradas por mes
-                        </div>
-                        <div class="card-body"><div style="position: relative; height: 300px;"><canvas id="graficoLinea"></canvas></div></div>
-                    </div>
-                </div>
-                <div class="col-lg-6">
-                    <div class="card shadow-sm border-0 rounded-4 h-100">
-                        <div class="card-header bg-dark text-white fw-bold">
-                            <i class="bi bi-trophy-fill text-warning me-2"></i>Formatos más rentables (S/)
-                        </div>
-                        <div class="card-body"><div style="position: relative; height: 300px;"><canvas id="graficoTop"></canvas></div></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row g-4">
-                <!-- TABLA RESUMEN MENSUAL (se actualiza con el año elegido) -->
-                <div class="col-lg-5">
-                    <div class="card shadow-sm border-0 rounded-4 h-100">
-                        <div class="card-header bg-dark text-white fw-bold">
-                            <i class="bi bi-table text-info me-2"></i>Resumen mensual de <span id="lblAnio" th:text="${anio}">2026</span>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-striped align-middle mb-0">
-                                <thead class="table-dark small">
-                                    <tr><th>Mes</th><th class="text-center">OTs cobradas</th><th class="text-end">Ingresos</th></tr>
-                                </thead>
-                                <tbody id="tbodyMeses"></tbody>
-                                <tfoot>
-                                    <tr class="fw-bold table-success">
-                                        <td>Total del año</td>
-                                        <td class="text-center" id="totOts">0</td>
-                                        <td class="text-end" id="totIngresos">S/ 0.00</td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-        <!-- TABLA POR FORMATO: se genera dinámicamente por AJAX para responder al filtro de año -->
-                <div class="col-lg-7">
-                    <div class="card shadow-sm border-0 rounded-4 h-100">
-                        <div class="card-header bg-dark text-white fw-bold">
-                            <i class="bi bi-collection-play text-warning me-2"></i>Ingresos por formato (OTs finalizadas)
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-striped table-hover align-middle mb-0">
-                                <thead class="table-dark small">
-                                    <tr>
-                                        <th>Formato</th>
-                                        <th>Categoría</th>
-                                        <th class="text-center">OTs</th>
-                                        <th class="text-center">Unidades / horas</th>
-                                        <th class="text-end">Ingresos</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tbodyFormatos">
-                                    <tr><td colspan="5" class="text-center text-muted py-3">Cargando…</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+            <!-- Punto de montaje de React: los años del selector vienen de ReporteService.aniosDisponibles() -->
+            <div id="root" th:data-anios="${#strings.listJoin(anios, ',')}" th:data-anio="${anio}">
+                <div class="text-center text-muted py-5" id="msgCargaReportes">
+                    <div class="spinner-border text-warning mb-3" role="status"></div>
+                    <div>Cargando reportes...</div>
                 </div>
             </div>
         </main>
     </div>
 
     <th:block th:replace="~{fragments/footer :: scripts}"></th:block>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-    <script>
-        /* =====================================================================
-           REPORTES (Chart.js): barras, línea, torta/rosquilla y barras horizontales.
-           - El selector de año consulta GET /api/reportes/ventas-mensuales?anio=XXXX
-             (JSON de SP_Reporte_Ventas) y actualiza gráficos y tabla sin recargar.
-           - Los ingresos por formato vienen de GET /api/reportes/formatos?anio=XXXX
-             y también se actualizan con el año seleccionado.
-           ===================================================================== */
-        const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Setiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-        const PALETA = ['#0d6efd', '#ffc107', '#198754', '#dc3545', '#0dcaf0', '#6f42c1', '#fd7e14', '#20c997', '#6c757d', '#d63384', '#adb5bd', '#343a40', '#8540f5'];
-        const soles = (v) => 'S/ ' + Number(v).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-        async function pedir(url) {
-            const r = await fetch(url);
-            const tipo = r.headers.get('content-type') || '';
-            if (!r.ok || !tipo.includes('application/json')) { throw new Error('HTTP ' + r.status); }
-            return r.json();
-        }
-
-        const graficoBarras = new Chart(document.getElementById('graficoBarras'), {
-            type: 'bar',
-            data: { labels: MESES.map(function (m) { return m.substring(0, 3); }), datasets: [{ label: 'Ingresos (S/)', data: [], backgroundColor: '#0d6efd', borderRadius: 6 }] },
-            options: { responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (c) { return soles(c.parsed.y); } } } },
-                scales: { y: { beginAtZero: true } } }
-        });
-
-        const graficoLinea = new Chart(document.getElementById('graficoLinea'), {
-            type: 'line',
-            data: { labels: MESES.map(function (m) { return m.substring(0, 3); }), datasets: [{ label: 'OTs cobradas', data: [], borderColor: '#198754', backgroundColor: 'rgba(25,135,84,.15)', fill: true, tension: .3 }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
-        });
-
-        // Torta <-> Rosquilla: se destruye y se vuelve a crear con el tipo elegido
-        let datosFormatos = [];
-        let graficoCirculo = null;
-        let graficoTop = null;
-
-        function crearCirculo(tipo) {
-            if (graficoCirculo) { graficoCirculo.destroy(); }
-            graficoCirculo = new Chart(document.getElementById('graficoCirculo'), {
-                type: tipo,
-                data: { labels: datosFormatos.map(function (f) { return f.formato; }),
-                        datasets: [{ data: datosFormatos.map(function (f) { return f.ingresos; }), backgroundColor: PALETA }] },
-                options: { responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } },
-                               tooltip: { callbacks: { label: function (c) { return c.label + ': ' + soles(c.parsed); } } } } }
-            });
-        }
-
-        function crearTop(datos) {
-            if (graficoTop) { graficoTop.destroy(); }
-            const top = datos.slice(0, 8);
-            graficoTop = new Chart(document.getElementById('graficoTop'), {
-                type: 'bar',
-                data: { labels: top.map(function (f) { return f.formato; }),
-                        datasets: [{ label: 'Ingresos (S/)', data: top.map(function (f) { return f.ingresos; }), backgroundColor: '#ffc107', borderRadius: 6 }] },
-                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false },
-                    tooltip: { callbacks: { label: function (c) { return soles(c.parsed.x); } } } },
-                    scales: { x: { beginAtZero: true } } }
-            });
-        }
-
-        function actualizarTablaFormatos(datos) {
-            const tbody = document.getElementById('tbodyFormatos');
-            tbody.innerHTML = '';
-            if (!datos || datos.length === 0) {
-                const tr = document.createElement('tr');
-                tr.innerHTML = '<td colspan="5" class="text-center text-muted py-3">Sin OTs finalizadas para el año seleccionado.</td>';
-                tbody.appendChild(tr);
-                return;
-            }
-            datos.forEach(function (f) {
-                const tr = document.createElement('tr');
-                tr.innerHTML =
-                    '<td class="fw-semibold">' + f.formato + '</td>' +
-                    '<td><span class="badge bg-secondary">' + f.categoria + '</span></td>' +
-                    '<td class="text-center">' + f.ordenes + '</td>' +
-                    '<td class="text-center">' + f.unidades + '</td>' +
-                    '<td class="text-end fw-semibold">' + soles(f.ingresos) + '</td>';
-                tbody.appendChild(tr);
-            });
-        }
-
-        document.getElementById('selTipoCirculo').addEventListener('change', function () { crearCirculo(this.value); });
-
-        // ---------- Carga por año (AJAX): actualiza TODOS los gráficos y tablas ----------
-        async function cargarAnio(anio) {
-            // 1. Ventas mensuales (barras, línea y tabla resumen)
-            let meses;
-            try {
-                meses = await pedir('/api/reportes/ventas-mensuales?anio=' + anio);
-            } catch (e) {
-                alert('No se pudo cargar el reporte (¿sesión vencida?).');
-                return;
-            }
-            graficoBarras.data.datasets[0].data = meses.map(function (m) { return m.totalIngresos; });
-            graficoBarras.update();
-            graficoLinea.data.datasets[0].data = meses.map(function (m) { return m.cantidadOrdenes; });
-            graficoLinea.update();
-
-            const cuerpo = document.getElementById('tbodyMeses');
-            cuerpo.innerHTML = '';
-            let totOts = 0, totIng = 0;
-            meses.forEach(function (m) {
-                totOts += m.cantidadOrdenes;
-                totIng += Number(m.totalIngresos);
-                const tr = document.createElement('tr');
-                [MESES[m.mes - 1], m.cantidadOrdenes, soles(m.totalIngresos)].forEach(function (v, k) {
-                    const td = document.createElement('td');
-                    td.textContent = v;
-                    if (k === 1) td.className = 'text-center';
-                    if (k === 2) td.className = 'text-end';
-                    tr.appendChild(td);
-                });
-                cuerpo.appendChild(tr);
-            });
-            document.getElementById('totOts').textContent = totOts;
-            document.getElementById('totIngresos').textContent = soles(totIng);
-            document.getElementById('lblAnio').textContent = anio;
-
-            // 2. Ingresos por formato (rosquilla/torta, top rentables y tabla)
-            let formatos;
-            try {
-                formatos = await pedir('/api/reportes/formatos?anio=' + anio);
-            } catch (e) {
-                formatos = [];
-            }
-            datosFormatos = formatos;
-            crearCirculo(document.getElementById('selTipoCirculo').value);
-            crearTop(formatos);
-            actualizarTablaFormatos(formatos);
-        }
-
-        const selAnio = document.getElementById('selAnio');
-        selAnio.addEventListener('change', function () { cargarAnio(this.value); });
-        cargarAnio(selAnio.value);
-    </script>
+    <script type="module" th:src="@{/react-reportes/assets/reportes.js}"
+        onerror="document.getElementById('msgCargaReportes').innerHTML = '<div class=&quot;alert alert-warning d-inline-block&quot;>No se encontró la aplicación de reportes compilada. Ejecute <code>npm install</code> y <code>npm run build</code> en la carpeta <code>frontend-reportes/</code> y reinicie la aplicación.</div>';"></script>
 </body>
 
 </html>

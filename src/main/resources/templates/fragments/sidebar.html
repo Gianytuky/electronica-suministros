@@ -141,9 +141,12 @@
                     <a th:href="@{/}" class="btn btn-outline-light btn-sm text-start">
                         <i class="bi bi-globe me-2"></i>Ver web pública
                     </a>
-                    <a th:href="@{/logout}" class="btn btn-outline-danger btn-sm text-start">
-                        <i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión
-                    </a>
+                    <!-- Spring Security: el cierre de sesión es POST con token CSRF -->
+                    <form th:action="@{/logout}" method="post" class="m-0">
+                        <button type="submit" class="btn btn-outline-danger btn-sm text-start w-100">
+                            <i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión
+                        </button>
+                    </form>
                 </div>
             </div>
           </div>

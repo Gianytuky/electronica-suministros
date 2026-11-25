@@ -270,6 +270,7 @@ public class OrdenService {
         dto.setCodigoOt(ot.getCodigoOt());
         dto.setCliente(ot.getCliente().getNombres());
         dto.setDocumento(ot.getCliente().getDniCliente());
+        dto.setCorreoCliente(ot.getCliente().getCorreo());
         dto.setEjecutivo(ot.getEjecutivo().getNombres());
         dto.setTotal(total);
         dto.setSubtotal(subtotal);

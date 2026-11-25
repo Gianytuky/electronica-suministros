@@ -15,3 +15,4 @@ public class SuministrosApplication {
         SpringApplication.run(SuministrosApplication.class, args);
     }
 }
+

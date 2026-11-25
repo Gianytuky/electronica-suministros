@@ -22,6 +22,10 @@
                     <i class="bi bi-shield-exclamation me-2"></i><span th:text="${denegadoMsg}"></span>
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
                 </div>
+                <div th:if="${resetMsg}" class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+                    <i class="bi bi-check-circle-fill me-2"></i><span th:text="${resetMsg}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+                </div>
 
                 <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
                     <div class="card-header bg-dark text-white text-center py-4 border-bottom border-warning">
@@ -46,6 +50,10 @@
                                     <span class="input-group-text bg-light"><i class="bi bi-key"></i></span>
                                     <input type="password" class="form-control" id="txtPassword" name="password"
                                         placeholder="••••••" required>
+                                </div>
+                                <div class="text-end mt-2">
+                                    <a th:href="@{/recover}" class="small text-decoration-none">
+                                        <i class="bi bi-question-circle me-1"></i>¿Olvidaste tu contraseña?</a>
                                 </div>
                             </div>
                             <button type="submit" class="btn btn-primary w-100 fw-bold py-2 shadow-sm">

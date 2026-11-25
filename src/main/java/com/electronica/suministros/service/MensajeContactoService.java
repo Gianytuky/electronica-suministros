@@ -14,9 +14,11 @@ import com.electronica.suministros.repository.MensajeContactoRepository;
 public class MensajeContactoService {
 
     private final MensajeContactoRepository mensajeRepo;
+    private final EmailService emailService;
 
-    public MensajeContactoService(MensajeContactoRepository mensajeRepo) {
+    public MensajeContactoService(MensajeContactoRepository mensajeRepo, EmailService emailService) {
         this.mensajeRepo = mensajeRepo;
+        this.emailService = emailService;
     }
 
     @Transactional
@@ -52,6 +54,37 @@ public class MensajeContactoService {
             m.setEstado("LEIDO");
             mensajeRepo.save(m);
         });
+    }
+
+    /**
+     * Avance final: el Ejecutivo responde una consulta directamente por correo desde la bandeja.
+     * El envío es síncrono a propósito (para avisarle al instante si falló) y por eso el método no es
+     * @Transactional: no se mantiene abierta una transacción mientras se espera al servidor SMTP.
+     * Si el correo sale bien, la consulta se marca como LEIDO. Devuelve el destino para mostrarlo en pantalla:
+     * el correo del cliente o, con el modo prueba activo, la cuenta de pruebas junto al destinatario real.
+     */
+    public String responder(Integer idMensaje, String asunto, String respuesta, String ejecutivo) {
+        MensajeContacto m = mensajeRepo.findById(idMensaje)
+                .orElseThrow(() -> new NegocioException("La consulta ya no existe en la bandeja."));
+        if (asunto == null || asunto.isBlank() || respuesta == null || respuesta.isBlank()) {
+            throw new NegocioException("Escriba el asunto y el texto de la respuesta.");
+        }
+        if (asunto.trim().length() > 150) {
+            throw new NegocioException("El asunto no puede superar los 150 caracteres.");
+        }
+        if (respuesta.trim().length() > 3000) {
+            throw new NegocioException("La respuesta no puede superar los 3000 caracteres.");
+        }
+        try {
+            emailService.respuestaConsulta(m.getCorreo(), m.getNombre(), asunto.trim(), respuesta,
+                    m.getMensaje(), ejecutivo);
+        } catch (CorreoException e) {
+            throw new NegocioException("No se pudo enviar la respuesta. Revise la configuración de correo "
+                    + "(MAIL_USER / MAIL_PASSWORD) y que el correo del cliente sea válido. Detalle: " + e.getMessage());
+        }
+        m.setEstado("LEIDO");
+        mensajeRepo.save(m);
+        return emailService.describirDestino(m.getCorreo());
     }
 
     @Transactional

@@ -21,6 +21,10 @@ import jakarta.servlet.http.HttpSession;
  * El ADMIN tiene acceso total (regla heredada del Avance 2).
  * Sin sesión se redirige al login; con sesión pero sin permiso se responde 403,
  * que Spring Boot muestra con templates/error/403.html.
+ *
+ * Avance final: Spring Security (SecurityConfig) es ahora el primer filtro y aplica estas mismas reglas antes
+ * de llegar aquí. El interceptor se conserva sin cambios de lógica como segunda capa (defensa en profundidad):
+ * verifica el UsuarioSesionDTO que LoginExitosoHandler guarda en la sesión.
  */
 @Component
 public class AuthInterceptor implements HandlerInterceptor {
@@ -62,7 +66,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         if ("ADMIN".equals(rol)) {
             return true;
         }
-        if (uri.startsWith("/ejecutivo") || uri.startsWith("/api/ordenes")) {
+        if (uri.startsWith("/ejecutivo") || uri.startsWith("/api/ordenes") || uri.startsWith("/api/reniec")) {
             return "EJECUTIVO".equals(rol);
         }
         if (uri.startsWith("/tecnico")) {

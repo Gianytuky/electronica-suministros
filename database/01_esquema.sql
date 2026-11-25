@@ -30,10 +30,15 @@ CREATE TABLE usuario (
     id_rol         INT          NOT NULL,
     nombres        VARCHAR(100) NOT NULL,
     correo         VARCHAR(100) NOT NULL UNIQUE,
-    password       VARCHAR(255) NOT NULL,       -- hash SHA-256 en hexadecimal
+    password       VARCHAR(255) NOT NULL,       -- hash BCrypt ({bcrypt}$2a$10$...); antes SHA-256 en hexadecimal
     estado         VARCHAR(10)  NOT NULL DEFAULT 'ACTIVO',   -- ACTIVO | INACTIVO
     fecha_registro DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_usuario_rol FOREIGN KEY (id_rol) REFERENCES rol (id_rol)
+    -- Avance final: recuperación de contraseña con token UUID temporal (de un solo uso).
+    -- Quedan en NULL mientras no haya una recuperación en curso.
+    reset_token        VARCHAR(36) NULL,        -- UUID, p. ej. 3f2b8c1e-9d4a-4b7e-a1c2-5e6f7a8b9c0d
+    reset_token_expira DATETIME    NULL,        -- fecha y hora límite para usar el token
+    CONSTRAINT fk_usuario_rol FOREIGN KEY (id_rol) REFERENCES rol (id_rol),
+    CONSTRAINT uq_usuario_reset_token UNIQUE (reset_token)
 ) ENGINE = InnoDB;
 
 CREATE TABLE cliente (

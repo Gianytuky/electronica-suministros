@@ -11,6 +11,9 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Integer> {
 
     Optional<Usuario> findByCorreoIgnoreCase(String correo);
 
+    /** Recuperación de contraseña: busca al usuario dueño de un token UUID. */
+    Optional<Usuario> findByResetToken(String resetToken);
+
     boolean existsByCorreoIgnoreCase(String correo);
 
     boolean existsByCorreoIgnoreCaseAndIdUsuarioNot(String correo, Integer idUsuario);

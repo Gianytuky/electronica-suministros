@@ -17,6 +17,7 @@ import com.electronica.suministros.dto.CapturaFormDTO;
 import com.electronica.suministros.dto.UsuarioSesionDTO;
 import com.electronica.suministros.entity.OrdenTrabajo;
 import com.electronica.suministros.service.CapturaService;
+import com.electronica.suministros.service.EmailService;
 import com.electronica.suministros.service.NegocioException;
 import com.electronica.suministros.service.OrdenService;
 
@@ -29,10 +30,12 @@ public class TecnicoController {
 
     private final CapturaService capturaService;
     private final OrdenService ordenService;
+    private final EmailService emailService;
 
-    public TecnicoController(CapturaService capturaService, OrdenService ordenService) {
+    public TecnicoController(CapturaService capturaService, OrdenService ordenService, EmailService emailService) {
         this.capturaService = capturaService;
         this.ordenService = ordenService;
+        this.emailService = emailService;
     }
 
     @GetMapping("/panel")
@@ -68,7 +71,7 @@ public class TecnicoController {
             if (OrdenTrabajo.POR_NOTIFICAR.equals(ot.getEstado())) {
                 flash.addFlashAttribute("ok", "Captura guardada. Todas las líneas de la OT " + ot.getCodigoOt()
                         + " fueron procesadas: el total se recalculó a S/ " + ot.getMontoEstimado()
-                        + " y la OT pasó a Por Notificar.");
+                        + " y la OT pasó a Por Notificar. " + textoAvisoCliente(ot));
             } else {
                 flash.addFlashAttribute("ok", "Captura guardada. Aún quedan líneas de la OT " + ot.getCodigoOt()
                         + " por procesar; total parcial S/ " + ot.getMontoEstimado() + ".");
@@ -77,6 +80,19 @@ public class TecnicoController {
             flash.addFlashAttribute("error", e.getMessage());
         }
         return "redirect:/tecnico/ordenes/" + idOt;
+    }
+
+    /**
+     * Frase informativa sobre el correo automático. El envío real ocurre después, en segundo plano
+     * (NotificacionOrdenListener), por eso el texto anuncia el aviso en futuro y no lo da por enviado;
+     * el resultado real queda en el log. Con el modo prueba activo indica a qué cuenta llegará de verdad.
+     */
+    private String textoAvisoCliente(OrdenTrabajo ot) {
+        String correo = ot.getCliente().getCorreo();
+        if (correo == null || correo.isBlank()) {
+            return "El cliente no tiene correo registrado, por lo que no se enviará aviso.";
+        }
+        return "Se enviará un aviso por correo a " + emailService.describirDestino(correo) + ".";
     }
 
     @GetMapping("/historial")

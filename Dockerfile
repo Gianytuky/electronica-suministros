@@ -10,6 +10,7 @@ FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
-# Render inyecta la variable PORT; application.properties la lee con ${PORT:8083}.
-# La conexión a Aiven se define con DB_URL, DB_USER y DB_PASSWORD (variables de entorno de Render).
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Railway (o Render) inyecta la variable PORT; application.properties la lee con ${PORT:8083}.
+# Base de datos: DB_URL, DB_USER y DB_PASSWORD. Correo: MAIL_*. Enlace de recuperación: APP_BASE_URL.
+# Todas se definen como variables de entorno en la plataforma, nunca en el código.
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "app.jar"]

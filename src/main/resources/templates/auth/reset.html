@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<!--
+  Recuperación de contraseña, paso 2: formulario de nueva contraseña.
+  Solo se muestra si el token del enlace (UUID) existe y no venció (tokenValido = true).
+  AuthController (GET/POST /reset) lo valida y RecuperacionService guarda la clave con BCrypt.
+-->
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+
+<head th:replace="~{fragments/header :: head('Nueva contraseña')}"></head>
+
+<body class="d-flex align-items-center justify-content-center py-5"
+    style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); min-height: 100vh;">
+    <main class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-5 col-lg-4 col-11">
+
+                <div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMsg}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+                </div>
+
+                <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+                    <div class="card-header bg-dark text-white text-center py-4 border-bottom border-warning">
+                        <i class="bi bi-key-fill text-warning fs-1 d-block mb-2"></i>
+                        <h4 class="fw-bold mb-0">Nueva contraseña</h4>
+                        <small class="text-secondary">Electrónica y Suministros</small>
+                    </div>
+
+                    <!-- Token válido: formulario -->
+                    <div class="card-body p-4" th:if="${tokenValido}">
+                        <p class="small text-muted mb-3">Elija una contraseña nueva para su cuenta. Este enlace solo se puede usar una vez.</p>
+                        <form th:action="@{/reset}" method="post" id="formReset">
+                            <input type="hidden" name="token" th:value="${token}">
+                            <div class="mb-3">
+                                <label for="txtPassword" class="form-label fw-bold small">Nueva contraseña *</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light"><i class="bi bi-key"></i></span>
+                                    <input type="password" class="form-control" id="txtPassword" name="password"
+                                        minlength="3" maxlength="60" placeholder="Mínimo 3 caracteres" required autofocus>
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <label for="txtConfirmacion" class="form-label fw-bold small">Repita la contraseña *</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light"><i class="bi bi-key-fill"></i></span>
+                                    <input type="password" class="form-control" id="txtConfirmacion" name="confirmacion"
+                                        minlength="3" maxlength="60" placeholder="Repita la contraseña" required>
+                                </div>
+                                <div class="invalid-feedback d-block" id="avisoCoincide"></div>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100 fw-bold py-2 shadow-sm">
+                                <i class="bi bi-check2-circle me-2"></i>Guardar nueva contraseña
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Token inválido o vencido -->
+                    <div class="card-body p-4 text-center" th:unless="${tokenValido}">
+                        <i class="bi bi-hourglass-bottom text-warning fs-1 d-block mb-2"></i>
+                        <h5 class="fw-bold">Enlace no válido o vencido</h5>
+                        <p class="small text-muted mb-3">
+                            El enlace de recuperación ya se usó, venció o no es correcto. Solicite uno nuevo para continuar.
+                        </p>
+                        <a th:href="@{/recover}" class="btn btn-primary fw-bold">
+                            <i class="bi bi-envelope-arrow-up me-2"></i>Solicitar un nuevo enlace
+                        </a>
+                    </div>
+
+                    <div class="card-footer bg-light text-center py-3">
+                        <a th:href="@{/login}" class="text-decoration-none text-muted small">
+                            <i class="bi bi-arrow-left me-1"></i>Volver al inicio de sesión
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <th:block th:replace="~{fragments/footer :: scripts}"></th:block>
+    <script>
+        // Aviso inmediato si las dos contraseñas no coinciden (el servidor las vuelve a validar).
+        const formReset = document.getElementById('formReset');
+        if (formReset) {
+            const p1 = document.getElementById('txtPassword');
+            const p2 = document.getElementById('txtConfirmacion');
+            const aviso = document.getElementById('avisoCoincide');
+            function comparar() {
+                const ok = !p2.value || p1.value === p2.value;
+                aviso.textContent = ok ? '' : 'Las contraseñas no coinciden.';
+                p2.setCustomValidity(ok ? '' : 'Las contraseñas no coinciden.');
+            }
+            p1.addEventListener('input', comparar);
+            p2.addEventListener('input', comparar);
+        }
+    </script>
+</body>
+
+</html>

@@ -30,8 +30,18 @@
                     </form>
                     <a th:if="${orden.estado == 'Finalizado'}" th:href="@{/ejecutivo/ordenes/{id}/comprobante(id=${orden.idOt})}"
                         target="_blank" class="btn btn-danger fw-semibold"><i class="bi bi-file-earmark-pdf me-1"></i>Boleta PDF</a>
+                    <!-- Avance final: enviar la boleta en PDF al correo del cliente -->
+                    <form th:if="${orden.estado == 'Finalizado'}"
+                        th:action="@{/ejecutivo/ordenes/{id}/enviar-boleta(id=${orden.idOt})}" method="post" class="d-inline"
+                        onsubmit="if (!confirm('¿Enviar la boleta por correo al cliente?')) return false; this.querySelector('button').disabled = true; return true;">
+                        <input type="hidden" name="volver" value="detalle">
+                        <button type="submit" class="btn btn-outline-primary fw-semibold"><i class="bi bi-envelope-paper me-1"></i>Enviar boleta por correo</button>
+                    </form>
                 </div>
             </div>
+
+            <!-- Avance final: resultado del envío de la boleta por correo -->
+            <div th:replace="~{fragments/header :: alertas}"></div>
 
             <div class="row g-4 mb-4">
                 <div class="col-lg-8">

@@ -1,11 +1,8 @@
 package com.electronica.suministros.service;
 
-import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.List;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,29 +21,32 @@ public class UsuarioService {
     private final RolRepository rolRepo;
     private final OrdenTrabajoRepository ordenRepo;
     private final CapturaTecnicaRepository capturaRepo;
+    private final PasswordEncoder passwordEncoder;
 
     public UsuarioService(UsuarioRepository usuarioRepo, RolRepository rolRepo,
-                          OrdenTrabajoRepository ordenRepo, CapturaTecnicaRepository capturaRepo) {
+                          OrdenTrabajoRepository ordenRepo, CapturaTecnicaRepository capturaRepo,
+                          PasswordEncoder passwordEncoder) {
         this.usuarioRepo = usuarioRepo;
         this.rolRepo = rolRepo;
         this.ordenRepo = ordenRepo;
         this.capturaRepo = capturaRepo;
+        this.passwordEncoder = passwordEncoder;
     }
 
-    /** Devuelve los datos de sesión si las credenciales son correctas y el usuario está ACTIVO; si no, null. */
+    /**
+     * Avance final (Spring Security): la verificación del correo y la contraseña la hace Spring Security
+     * (UsuarioDetailsService). Este método solo arma los datos que se guardan en la sesión tras un login correcto.
+     */
     @Transactional(readOnly = true)
-    public UsuarioSesionDTO autenticar(String correo, String password) {
-        if (correo == null || password == null || correo.isBlank() || password.isBlank()) {
-            return null;
-        }
-        Usuario u = usuarioRepo.findByCorreoIgnoreCase(correo.trim()).orElse(null);
-        if (u == null || !"ACTIVO".equals(u.getEstado())) {
-            return null;
-        }
-        if (!u.getPassword().equals(hash(password.trim()))) {
-            return null;
-        }
+    public UsuarioSesionDTO datosSesion(String correo) {
+        Usuario u = usuarioRepo.findByCorreoIgnoreCase(correo == null ? "" : correo.trim())
+                .orElseThrow(() -> new NegocioException("El usuario no existe"));
         return new UsuarioSesionDTO(u.getIdUsuario(), u.getNombres(), u.getCorreo(), u.getRol().getNombreRol());
+    }
+
+    /** Avance final: contraseña cifrada con BCrypt (antes SHA-256). La usa la administración de usuarios (RecuperacionService usa el mismo PasswordEncoder). */
+    public String cifrar(String password) {
+        return passwordEncoder.encode(password.trim());
     }
 
     @Transactional(readOnly = true)
@@ -87,7 +87,7 @@ public class UsuarioService {
             Usuario nuevo = new Usuario();
             nuevo.setNombres(nombres.trim());
             nuevo.setCorreo(correoFinal);
-            nuevo.setPassword(hash(password.trim()));
+            nuevo.setPassword(cifrar(password));
             nuevo.setRol(rol);
             nuevo.setEstado(estadoFinal);
             usuarioRepo.save(nuevo);
@@ -109,7 +109,7 @@ public class UsuarioService {
             if (password.trim().length() < 3) {
                 throw new NegocioException("La contraseña debe tener al menos 3 caracteres");
             }
-            u.setPassword(hash(password.trim()));
+            u.setPassword(cifrar(password));
         }
         usuarioRepo.save(u);
     }
@@ -128,16 +128,5 @@ public class UsuarioService {
         }
         usuarioRepo.delete(u);
         return "Usuario eliminado correctamente.";
-    }
-
-    /** SHA-256 en hexadecimal minúscula: el mismo resultado que SHA2('clave', 256) de MySQL. */
-    public static String hash(String texto) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] bytes = md.digest(texto.getBytes(StandardCharsets.UTF_8));
-            return String.format("%064x", new BigInteger(1, bytes));
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 no disponible", e);
-        }
     }
 }

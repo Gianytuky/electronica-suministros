@@ -8,31 +8,40 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import com.electronica.suministros.config.AuthInterceptor;
 import com.electronica.suministros.dto.UsuarioSesionDTO;
-import com.electronica.suministros.service.UsuarioService;
+import com.electronica.suministros.service.NegocioException;
+import com.electronica.suministros.service.RecuperacionService;
 
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 
-/** Inicio y cierre de sesión (vista templates/auth/login.html). */
+/**
+ * Pantalla de inicio de sesión (templates/auth/login.html) y recuperación de contraseña con token UUID
+ * (recover.html y reset.html).
+ *
+ * Avance final (Spring Security): el POST /login (verificación del correo y la contraseña BCrypt) y el
+ * POST /logout los procesa Spring Security (SecurityConfig); al iniciar sesión, LoginExitosoHandler guarda
+ * el usuario en la sesión y redirige con rutaSegunRol(). Este controlador solo muestra las vistas.
+ * /login, /recover y /reset son rutas públicas.
+ */
 @Controller
 public class AuthController {
 
-    private final UsuarioService usuarioService;
+    private final RecuperacionService recuperacionService;
 
-    public AuthController(UsuarioService usuarioService) {
-        this.usuarioService = usuarioService;
+    public AuthController(RecuperacionService recuperacionService) {
+        this.recuperacionService = recuperacionService;
     }
 
     @GetMapping("/login")
     public String login(@RequestParam(required = false) String error,
                         @RequestParam(required = false) String logout,
                         @RequestParam(required = false) String denegado,
+                        @RequestParam(required = false) String reset,
                         HttpSession session,
                         Model model) {
 
         UsuarioSesionDTO enSesion = (UsuarioSesionDTO) session.getAttribute(AuthInterceptor.ATRIBUTO_SESION);
         if (enSesion != null) {
-            return redirigirSegunRol(enSesion.getRol());
+            return "redirect:" + rutaSegunRol(enSesion.getRol());
         }
         if (error != null) {
             model.addAttribute("errorMsg", "Credenciales incorrectas o usuario inactivo. Verifique su correo y contraseña.");
@@ -43,38 +52,62 @@ public class AuthController {
         if (denegado != null) {
             model.addAttribute("denegadoMsg", "Inicie sesión para acceder a ese módulo.");
         }
+        if (reset != null) {
+            model.addAttribute("resetMsg", "Su contraseña fue actualizada. Ya puede iniciar sesión con la nueva.");
+        }
         return "auth/login";
     }
 
-    @PostMapping("/login")
-    public String procesarLogin(@RequestParam String correo,
+    // ------------------------------------------------------------------ recuperación de contraseña
+
+    /** Formulario "¿Olvidaste tu contraseña?": pide el correo de la cuenta. */
+    @GetMapping("/recover")
+    public String recover(@RequestParam(required = false) String enviado, Model model) {
+        if (enviado != null) {
+            model.addAttribute("enviadoMsg", "Si el correo corresponde a una cuenta activa, le enviamos un enlace "
+                    + "para crear una nueva contraseña. Revise su bandeja de entrada y la carpeta de spam.");
+        }
+        return "auth/recover";
+    }
+
+    /** Siempre responde igual (exista o no el correo) para no revelar qué cuentas están registradas. */
+    @PostMapping("/recover")
+    public String procesarRecover(@RequestParam String correo) {
+        recuperacionService.solicitar(correo);
+        return "redirect:/recover?enviado=true";
+    }
+
+    /** Enlace del correo: muestra el formulario de nueva contraseña si el token aún es válido. */
+    @GetMapping("/reset")
+    public String reset(@RequestParam(required = false) String token, Model model) {
+        model.addAttribute("token", token);
+        model.addAttribute("tokenValido", recuperacionService.tokenValido(token));
+        return "auth/reset";
+    }
+
+    @PostMapping("/reset")
+    public String procesarReset(@RequestParam String token,
                                 @RequestParam String password,
-                                HttpServletRequest request) {
-
-        UsuarioSesionDTO usuario = usuarioService.autenticar(correo, password);
-        if (usuario == null) {
-            return "redirect:/login?error=true";
+                                @RequestParam String confirmacion,
+                                Model model) {
+        try {
+            recuperacionService.restablecer(token, password, confirmacion);
+            return "redirect:/login?reset=true";
+        } catch (NegocioException e) {
+            model.addAttribute("errorMsg", e.getMessage());
+            model.addAttribute("token", token);
+            model.addAttribute("tokenValido", recuperacionService.tokenValido(token));
+            return "auth/reset";
         }
-        // Si ya existía una sesión anónima, se cambia su id (protege contra fijación de sesión)
-        if (request.getSession(false) != null) {
-            request.changeSessionId();
-        }
-        request.getSession(true).setAttribute(AuthInterceptor.ATRIBUTO_SESION, usuario);
-        return redirigirSegunRol(usuario.getRol());
     }
 
-    @GetMapping("/logout")
-    public String logout(HttpSession session) {
-        session.invalidate();
-        return "redirect:/login?logout=true";
-    }
-
-    private String redirigirSegunRol(String rol) {
-        return switch (rol) {
-            case "ADMIN" -> "redirect:/admin/dashboard";
-            case "EJECUTIVO" -> "redirect:/ejecutivo/ordenes";
-            case "TECNICO" -> "redirect:/tecnico/panel";
-            default -> "redirect:/";
+    /** Módulo de inicio de cada rol (lo usan GET /login y LoginExitosoHandler). */
+    public static String rutaSegunRol(String rol) {
+        return switch (rol == null ? "" : rol) {
+            case "ADMIN" -> "/admin/dashboard";
+            case "EJECUTIVO" -> "/ejecutivo/ordenes";
+            case "TECNICO" -> "/tecnico/panel";
+            default -> "/";
         };
     }
 }

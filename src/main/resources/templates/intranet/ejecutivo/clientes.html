@@ -93,8 +93,15 @@
                     <div class="row g-3">
                         <div class="col-12">
                             <label class="form-label fw-semibold">DNI (8 dígitos) o RUC (11 dígitos) *</label>
-                            <input type="text" name="dniCliente" id="fDoc" class="form-control" maxlength="11"
-                                pattern="[0-9]{8}|[0-9]{11}" title="8 dígitos (DNI) u 11 dígitos (RUC)" required>
+                            <!-- Avance final (integraciones): botón Buscar RENIEC / SUNAT (DNI -> /api/reniec/{dni}; RUC -> /api/reniec/ruc/{ruc}; ApiPeru.dev) -->
+                            <div class="input-group">
+                                <input type="text" name="dniCliente" id="fDoc" class="form-control" maxlength="11"
+                                    pattern="[0-9]{8}|[0-9]{11}" title="8 dígitos (DNI) u 11 dígitos (RUC)" required>
+                                <button type="button" class="btn btn-outline-primary" id="btnReniec" onclick="buscarReniec()">
+                                    <i class="bi bi-search me-1"></i>Buscar RENIEC / SUNAT
+                                </button>
+                            </div>
+                            <div class="form-text" id="msgReniec">Con un DNI (8 dígitos) o un RUC (11 dígitos) puede autocompletar el nombre o la razón social.</div>
                         </div>
                         <div class="col-12">
                             <label class="form-label fw-semibold">Nombres o razón social *</label>
@@ -125,6 +132,7 @@
         function nuevoCliente() {
             document.getElementById('tituloModalCliente').textContent = 'Nuevo cliente';
             ['fId', 'fDoc', 'fNombres', 'fTelefono', 'fCorreo'].forEach(function (i) { document.getElementById(i).value = ''; });
+            mensajeReniec('', 'Con un DNI (8 dígitos) o un RUC (11 dígitos) puede autocompletar el nombre o la razón social.');
             modalCliente.show();
         }
 
@@ -136,7 +144,51 @@
             document.getElementById('fNombres').value = d.nombres;
             document.getElementById('fTelefono').value = d.telefono || '';
             document.getElementById('fCorreo').value = d.correo || '';
+            mensajeReniec('', 'Con un DNI (8 dígitos) o un RUC (11 dígitos) puede autocompletar el nombre o la razón social.');
             modalCliente.show();
+        }
+
+        // ---------- Avance final (integraciones): autocompletar desde RENIEC (DNI) o SUNAT (RUC) con ApiPeru.dev ----------
+        function mensajeReniec(clase, texto) {
+            const caja = document.getElementById('msgReniec');
+            caja.className = 'form-text ' + clase;
+            caja.textContent = texto;
+        }
+
+        async function buscarReniec() {
+            const doc = document.getElementById('fDoc').value.trim();
+            const esDni = /^[0-9]{8}$/.test(doc);
+            const esRuc = /^[0-9]{11}$/.test(doc);
+            if (!esDni && !esRuc) {
+                mensajeReniec('text-danger', 'Escriba un DNI de 8 dígitos o un RUC de 11 dígitos.');
+                return;
+            }
+            const boton = document.getElementById('btnReniec');
+            boton.disabled = true;
+            mensajeReniec('text-muted', esDni ? 'Consultando RENIEC...' : 'Consultando SUNAT...');
+            try {
+                const r = await fetch(esDni ? '/api/reniec/' + doc : '/api/reniec/ruc/' + doc);
+                const tipo = r.headers.get('content-type') || '';
+                if (r.status === 401) { mensajeReniec('text-danger', 'Su sesión venció. Vuelva a iniciar sesión.'); return; }
+                if (!tipo.includes('application/json')) { mensajeReniec('text-danger', 'No se pudo realizar la consulta (HTTP ' + r.status + ').'); return; }
+                const datos = await r.json();
+                if (!r.ok) { mensajeReniec('text-danger', datos.error || 'No se pudo realizar la consulta.'); return; }
+                document.getElementById('fNombres').value = datos.nombreCliente;
+                if (esDni) {
+                    mensajeReniec('text-success', 'RENIEC: ' + (datos.nombreCompleto || datos.nombreCliente) + '. Revise los datos antes de guardar.');
+                } else {
+                    const estado = [datos.estado, datos.condicion].filter(Boolean).join(' / ');
+                    const alerta = (datos.estado && datos.estado !== 'ACTIVO') || (datos.condicion && datos.condicion !== 'HABIDO');
+                    mensajeReniec(alerta ? 'text-warning-emphasis fw-semibold' : 'text-success',
+                        'SUNAT: ' + datos.razonSocial + (estado ? ' (' + estado + ')' : '')
+                        + (datos.direccion ? ' · ' + datos.direccion : '')
+                        + (alerta ? '. Atención: el contribuyente no está ACTIVO / HABIDO.' : '. Revise los datos antes de guardar.'));
+                }
+            } catch (e) {
+                mensajeReniec('text-danger', 'No se pudo conectar con el servidor.');
+            } finally {
+                boton.disabled = false;
+            }
         }
     </script>
 </body>

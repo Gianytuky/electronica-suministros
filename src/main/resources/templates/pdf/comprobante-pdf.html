@@ -126,6 +126,14 @@
             border-bottom: 2px solid #0f172a;
         }
 
+        /* Avance final (integraciones): línea informativa con el monto en dólares */
+        .tc-ref {
+            text-align: right;
+            font-size: 9px;
+            color: #475569;
+            margin-top: 6px;
+        }
+
         .anulado {
             margin-top: 10px;
             padding: 6px;
@@ -225,6 +233,10 @@
             <td th:text="'S/ ' + ${#numbers.formatDecimal(c.total, 1, 'COMMA', 2, 'POINT')}">S/ 0.00</td>
         </tr>
     </table>
+
+    <!-- Avance final (integraciones): monto referencial en dólares con el tipo de cambio de ApiPeru.dev -->
+    <p class="tc-ref" th:if="${c.montoDolares != null}"
+       th:text="'Monto referencial en dólares: $' + ${#numbers.formatDecimal(c.montoDolares, 1, 'COMMA', 2, 'POINT')} + ' (Tipo de cambio referencial: S/ ' + ${#numbers.formatDecimal(c.tipoCambio, 1, 'COMMA', 3, 'POINT')} + '; ' + ${c.tipoCambioNota} + ')'">Monto referencial en dólares: $0.00 (Tipo de cambio referencial: S/ 3.750)</p>
 
     <div class="pie">
         <p>Gracias por confiar sus recuerdos a <b>Electrónica y Suministros S.A.C.</b></p>

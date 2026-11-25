@@ -8,3 +8,10 @@ target/
 *.iml
 *.log
 .DS_Store
+
+# Credenciales locales de correo (Avance final): nunca subir a GitHub
+.env
+# Archivos temporales de Python y Node (Avance final)
+__pycache__/
+*.pyc
+node_modules/

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<!--
+  Recuperación de contraseña, paso 1: el usuario escribe el correo de su cuenta.
+  AuthController (GET/POST /recover) genera un token UUID y envía el enlace por correo.
+  El mensaje de resultado es siempre el mismo, exista o no el correo.
+-->
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+
+<head th:replace="~{fragments/header :: head('Recuperar contraseña')}"></head>
+
+<body class="d-flex align-items-center justify-content-center py-5"
+    style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); min-height: 100vh;">
+    <main class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-5 col-lg-4 col-11">
+
+                <div th:if="${enviadoMsg}" class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+                    <i class="bi bi-envelope-check-fill me-2"></i><span th:text="${enviadoMsg}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+                </div>
+
+                <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+                    <div class="card-header bg-dark text-white text-center py-4 border-bottom border-warning">
+                        <i class="bi bi-shield-lock-fill text-warning fs-1 d-block mb-2"></i>
+                        <h4 class="fw-bold mb-0">Recuperar contraseña</h4>
+                        <small class="text-secondary">Electrónica y Suministros</small>
+                    </div>
+
+                    <div class="card-body p-4">
+                        <p class="small text-muted mb-3">
+                            Escriba el correo con el que ingresa a la intranet. Le enviaremos un enlace temporal
+                            para crear una nueva contraseña.
+                        </p>
+                        <form th:action="@{/recover}" method="post">
+                            <div class="mb-4">
+                                <label for="txtCorreo" class="form-label fw-bold small">Correo electrónico *</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light"><i class="bi bi-envelope"></i></span>
+                                    <input type="email" class="form-control" id="txtCorreo" name="correo"
+                                        placeholder="su_correo@ejemplo.com" maxlength="100" required autofocus>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100 fw-bold py-2 shadow-sm">
+                                <i class="bi bi-send me-2"></i>Enviar enlace de recuperación
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="card-footer bg-light text-center py-3">
+                        <a th:href="@{/login}" class="text-decoration-none text-muted small">
+                            <i class="bi bi-arrow-left me-1"></i>Volver al inicio de sesión
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <th:block th:replace="~{fragments/footer :: scripts}"></th:block>
+</body>
+
+</html>

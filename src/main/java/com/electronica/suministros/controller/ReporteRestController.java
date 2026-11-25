@@ -59,6 +59,18 @@ public class ReporteRestController {
         return reporteService.ingresosPorFormatoJson();
     }
 
+    /**
+     * Avance final (integraciones): análisis estadístico del microservicio Python (FastAPI).
+     * Siempre responde 200: si Python no está levantado devuelve {"disponible": false, "mensaje": ...}.
+     */
+    @GetMapping("/analisis")
+    public Map<String, Object> analisis(@RequestParam int anio) {
+        if (anio < 2000 || anio > 2100) {
+            throw new NegocioException("A\u00f1o fuera de rango");
+        }
+        return reporteService.analisis(anio);
+    }
+
     @ExceptionHandler(NegocioException.class)
     public ResponseEntity<Map<String, String>> negocio(NegocioException e) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));

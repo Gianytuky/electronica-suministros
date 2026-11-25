@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,13 +37,16 @@ public class CapturaService {
     private final DetalleOrdenRepository detalleRepo;
     private final OrdenTrabajoRepository ordenRepo;
     private final UsuarioRepository usuarioRepo;
+    private final ApplicationEventPublisher eventos;
 
     public CapturaService(CapturaTecnicaRepository capturaRepo, DetalleOrdenRepository detalleRepo,
-                          OrdenTrabajoRepository ordenRepo, UsuarioRepository usuarioRepo) {
+                          OrdenTrabajoRepository ordenRepo, UsuarioRepository usuarioRepo,
+                          ApplicationEventPublisher eventos) {
         this.capturaRepo = capturaRepo;
         this.detalleRepo = detalleRepo;
         this.ordenRepo = ordenRepo;
         this.usuarioRepo = usuarioRepo;
+        this.eventos = eventos;
     }
 
     /** Cola de trabajo: OTs que esperan captura (estado En Recepción). */
@@ -101,9 +105,22 @@ public class CapturaService {
 
         BigDecimal total = ot.getDetalles().stream().map(DetalleOrden::getSubtotal).reduce(BigDecimal.ZERO, BigDecimal::add);
         ot.setMontoEstimado(total);
-        if (ot.getDetalles().stream().allMatch(x -> x.getCaptura() != null)) {
+        boolean pasaAPorNotificar = ot.getDetalles().stream().allMatch(x -> x.getCaptura() != null);
+        if (pasaAPorNotificar) {
             ot.setEstado(OrdenTrabajo.POR_NOTIFICAR);
         }
-        return ordenRepo.save(ot);
+        OrdenTrabajo guardada = ordenRepo.save(ot);
+        if (pasaAPorNotificar) {
+            // Avance final: aviso automático por correo al cliente. El listener lo envía DESPUÉS del commit
+            // y en otro hilo, así que si el correo falla la captura técnica no se revierte (ver NotificacionOrdenListener).
+            List<String> medios = guardada.getDetalles().stream()
+                    .map(x -> x.getCaptura().getMedioEntrega())
+                    .distinct()
+                    .toList();
+            eventos.publishEvent(new OrdenPorNotificarEvent(guardada.getCodigoOt(),
+                    guardada.getCliente().getNombres(), guardada.getCliente().getCorreo(),
+                    guardada.getMontoEstimado(), medios));
+        }
+        return guardada;
     }
 }
